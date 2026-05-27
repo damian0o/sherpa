@@ -541,5 +541,6 @@ The full feature set is intentionally large because the user wants to explore th
 - **v0.4 (richer onboarding):** add `architecture-analyzer`, `domain-analyzer`, `article-analyzer`.
 - **v0.5 (read-side polish):** add `context-tour` and `tour-builder`.
 - **v1.0:** add `packages/dashboard/`.
+- **v1.1 (output formats):** add `context-present` skill that renders a wiki section, a topic walkthrough, or a tour as a [Slidev](https://github.com/slidevjs/slidev) deck. Emits `presentations/<slug>.slidev.md` for the user to preview with `slidev` (installed independently) or commit alongside the wiki. Ships a `templates/slidev-deck.md` starter. No new dependencies on the plugin itself.
 
 The plan can revise this. The point is that the spec captures the full design; the plan decides which slices ship together.
