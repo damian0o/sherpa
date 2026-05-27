@@ -15,7 +15,7 @@
 - Commands: `/context-init`, `/context-connect`.
 - Skills: `context-onboard-satellite`, `context-query`, `context-satellite`.
 - Sub-agents: `repo-scanner` only.
-- Templates: `CLAUDE.md`, `index.md`, `log.md`, `topic.md`, `decision.md`, `satellite-CLAUDE.md`.
+- Templates: `CLAUDE.md`, `index.md`, `log.md`, `topic.md`, `decision.md`, `principle.md`, `satellite-CLAUDE.md`.
 - Root: contributor `CLAUDE.md`, `AGENTS.md` + `GEMINI.md` symlinks, `README.md`, `LICENSE`, `package.json`, `tsconfig.json`, `vitest.config.ts`, `.gitignore`.
 
 **Out of scope (deferred to later bands):**
@@ -52,6 +52,7 @@ llm-wiki-impl/
         satellite-CLAUDE.md
         topic.md
         decision.md
+        principle.md
   tests/
     helpers/
       load-markdown.ts
@@ -729,6 +730,20 @@ describe("templates/CLAUDE.md (wiki schema)", () => {
     expect(missing).toEqual([]);
   });
 
+  it("Layout section names principles/ alongside topics/ decisions/ raw/", () => {
+    const { body } = loadMarkdown(path);
+    for (const dir of ["topics/", "decisions/", "principles/", "raw/"]) {
+      expect(body).toContain(dir);
+    }
+  });
+
+  it("Content categories section names four kinds (topics, decisions, principles, sources)", () => {
+    const { body } = loadMarkdown(path);
+    for (const kind of ["Topics", "Decisions", "Principles", "Sources"]) {
+      expect(body).toMatch(new RegExp(`\\*\\*?${kind}`));
+    }
+  });
+
   it("has no placeholder leftovers", () => {
     const { raw } = loadMarkdown(path);
     expect(noPlaceholders(raw)).toEqual([]);
@@ -754,10 +769,11 @@ A shared, LLM-maintained wiki across multiple satellite repositories (e.g. front
 
 ## Layout
 
-- `index.md` — the catalogue. Lists every topic, decision, and source page with a one-line summary. Updated whenever new pages are added.
-- `log.md` — append-only chronological record. Entry prefix: `## [YYYY-MM-DD] <kind> | <title>` where `<kind>` is one of `init`, `connect`, `onboard`, `ingest`, `satellite-update`, `lint`, `query`.
+- `index.md` — the catalogue. Lists every topic, decision, principle, and source page with a one-line summary. Updated whenever new pages are added.
+- `log.md` — append-only chronological record. Entry prefix: `## [YYYY-MM-DD] <kind> | <title>` where `<kind>` is one of `init`, `connect`, `onboard`, `ingest`, `satellite-update`, `lint`, `query`, `principle-adopted`, `principle-retired`.
 - `topics/` — cross-cutting topic pages. One page per concern (e.g. `api-contract.md`, `auth.md`, `deployment.md`).
 - `decisions/` — accepted architectural / process decisions (ADRs). One page per decision.
+- `principles/` — durable beliefs about how we work (e.g. `simple-systems.md`, `team-incentives.md`). Rare to retire; when retired, a `principle-retired` log entry must accompany the status change.
 - `raw/` — verbatim or near-verbatim source ingests (article summaries, meeting notes, etc.).
 - `.repo-context-meta.json` — generated marker file plus derived graph index. Never edit by hand.
 
@@ -775,9 +791,10 @@ A shared, LLM-maintained wiki across multiple satellite repositories (e.g. front
 
 ## Content categories
 
-- **Topics** (`topics/`): living documents about cross-cutting concerns. A topic page can be `status: active` (in flight), `status: stable` (settled), or `status: stale` (likely outdated). Active work is a `status:` field, not a separate file.
-- **Decisions** (`decisions/`): point-in-time accepted choices. ADR-style. `status: proposed | accepted | superseded`.
-- **Sources** (`raw/`): verbatim or near-verbatim ingested material. The source of truth for what was claimed where.
+- **Topics** (`topics/`): living documents about cross-cutting concerns. Present-tense, operational. A topic page can be `status: active` (in flight), `status: stable` (settled), or `status: stale` (likely outdated). Active work is a `status:` field, not a separate file.
+- **Decisions** (`decisions/`): point-in-time accepted choices. ADR-style. Past-tense — "we picked X over Y on date Z." `status: proposed | accepted | superseded`.
+- **Principles** (`principles/`): timeless beliefs about how we work — "we value simple systems," "we name teams by problem, not system." `status: active | retired`. Principles trace back to sources via the `sources:` front-matter field. A principle without sources is unverifiable; lint flags this as a blocker.
+- **Sources** (`raw/`): verbatim or near-verbatim ingested material. The evidence layer for everything else.
 
 ## Wiki maintenance discipline
 
@@ -823,9 +840,9 @@ Append to `tests/templates.test.ts`:
 describe("templates/index.md", () => {
   const path = resolve(templatesDir, "index.md");
   it("exists", () => expect(existsSync(path)).toBe(true));
-  it("has Topics, Decisions, Sources headings", () => {
+  it("has Topics, Decisions, Principles, Sources headings", () => {
     const { body } = loadMarkdown(path);
-    expect(hasSections(body, ["Topics", "Decisions", "Sources"])).toEqual([]);
+    expect(hasSections(body, ["Topics", "Decisions", "Principles", "Sources"])).toEqual([]);
   });
 });
 
@@ -868,6 +885,25 @@ describe("templates/decision.md", () => {
   });
 });
 
+describe("templates/principle.md", () => {
+  const path = resolve(templatesDir, "principle.md");
+  it("exists", () => expect(existsSync(path)).toBe(true));
+  it("has YAML front-matter with adopted, status, sources", () => {
+    const { frontMatter } = loadMarkdown(path);
+    expect(frontMatter).toHaveProperty("adopted");
+    expect(frontMatter).toHaveProperty("status");
+    expect(frontMatter).toHaveProperty("sources");
+  });
+  it("has 'What this means in practice' and 'What this does not mean' sections", () => {
+    const { body } = loadMarkdown(path);
+    expect(hasSections(body, ["What this means in practice", "What this does not mean", "Sources"])).toEqual([]);
+  });
+  it("does not have a repos: field (principles are not satellite-scoped)", () => {
+    const { frontMatter } = loadMarkdown(path);
+    expect(frontMatter).not.toHaveProperty("repos");
+  });
+});
+
 describe("templates/satellite-CLAUDE.md", () => {
   const path = resolve(templatesDir, "satellite-CLAUDE.md");
   it("exists", () => expect(existsSync(path)).toBe(true));
@@ -894,6 +930,10 @@ Expected: previous 3 still pass, new 11 fail because files don't exist.
 (none yet)
 
 ## Decisions
+
+(none yet)
+
+## Principles
 
 (none yet)
 
@@ -947,6 +987,23 @@ status: proposed
 ## Decision
 
 ## Consequences
+```
+
+- [ ] **Step 6b: Create `templates/principle.md`**
+
+```markdown
+---
+adopted: {{date}}
+status: active
+sources: []
+---
+# {{title}}
+
+## What this means in practice
+
+## What this does not mean
+
+## Sources
 ```
 
 - [ ] **Step 7: Create `templates/satellite-CLAUDE.md`**
@@ -1026,9 +1083,21 @@ describe("commands/context-init.md", () => {
     }
   });
 
+  it("body creates the four content-category directories", () => {
+    const { body } = loadMarkdown(path);
+    for (const d of ["topics/", "decisions/", "principles/", "raw/"]) {
+      expect(body).toContain(d);
+    }
+  });
+
   it("body specifies writing the marker .repo-context-meta.json", () => {
     const { body } = loadMarkdown(path);
     expect(body).toContain(".repo-context-meta.json");
+  });
+
+  it("body's meta file template includes a principles array", () => {
+    const { body } = loadMarkdown(path);
+    expect(body).toMatch(/"principles":\s*\[\]/);
   });
 
   it("has no placeholder leftovers", () => {
@@ -1073,7 +1142,7 @@ Execute these steps in order. Each step that performs a filesystem or git mutati
    - `templates/CLAUDE.md` → `<target>/CLAUDE.md`
    - `templates/index.md` → `<target>/index.md`
 4. **Render `log.md` with today's date.** Read `templates/log.md`, replace `{{date}}` with today's ISO date (YYYY-MM-DD), and write the result to `<target>/log.md`.
-5. **Create directories.** `mkdir -p <target>/topics <target>/decisions <target>/raw`.
+5. **Create directories.** `mkdir -p <target>/topics <target>/decisions <target>/principles <target>/raw`.
 6. **Write the marker file.** Create `<target>/.repo-context-meta.json` with this exact content (substitute `<date>` to today's ISO date):
 
    ```json
@@ -1082,6 +1151,7 @@ Execute these steps in order. Each step that performs a filesystem or git mutati
      "schema_version": 1,
      "topics": [],
      "decisions": [],
+     "principles": [],
      "updated": "<date>"
    }
    ```
@@ -1608,6 +1678,13 @@ describe("skills/context-query/SKILL.md", () => {
     expect(body).toMatch(/\[\[/);
   });
 
+  it("body routes question kinds to appropriate categories", () => {
+    const { body } = loadMarkdown(path);
+    expect(body).toMatch(/principle/i);
+    expect(body).toMatch(/topic/i);
+    expect(body).toMatch(/decision/i);
+  });
+
   it("has no placeholder leftovers", () => {
     const { raw } = loadMarkdown(path);
     expect(noPlaceholders(raw)).toEqual([]);
@@ -1645,10 +1722,15 @@ Do not activate for commands (`/context-init`, `/context-connect`, etc.) — tho
 
 ## Procedure
 
-1. **Read `index.md` first.** This is the catalogue; it lists every page with a one-line summary. Use it to identify which pages are likely relevant to the question.
-2. **Drill into pages.** For each candidate page from the index, read it. Follow `[[wikilink]]` references when they're clearly relevant; do not read every linked page transitively.
-3. **Synthesise the answer.** Compose a response in prose. Every claim that comes from a specific wiki page must cite the page using `[[page-slug]]` syntax. If the wiki doesn't cover the question, say so explicitly: "The wiki doesn't have a page on this; closest related pages are [[x]] and [[y]]."
-4. **Offer to file the answer back.** After answering, if the answer represents reusable knowledge (a comparison, a synthesis, a connection the wiki doesn't yet make), ask the user: *"This answer might be worth filing as a new topic page or decision. Want me to draft one?"* If the user agrees, propose the page (slug, location, content) and write it after their approval, following the *Wiki maintenance discipline* in the wiki's `CLAUDE.md`.
+1. **Read `index.md` first.** It sections content into Topics, Decisions, Principles, Sources. Use it to identify which pages are likely relevant.
+2. **Route by question kind.** The category to start in depends on what's being asked:
+   - **"How should we approach X?" / "What do we believe about X?"** → start in *Principles* (`principles/`). These questions ask for guidance, not state.
+   - **"What's the current state of X?" / "How does X work?"** → start in *Topics* (`topics/`).
+   - **"Why did we choose X?" / "When did we decide X?"** → start in *Decisions* (`decisions/`).
+   - **"What does the article / conversation about X say?"** → start in *Sources* (`raw/`).
+3. **Drill into pages.** For each candidate, read it. Follow `[[wikilink]]` references when clearly relevant; do not read every linked page transitively.
+4. **Synthesise the answer.** Compose a response in prose. Every claim from a wiki page cites it via `[[page-slug]]`. If the wiki doesn't cover the question, say so explicitly: "The wiki doesn't have a page on this; closest related pages are [[x]] and [[y]]."
+5. **Offer to file the answer back.** After answering, if the answer represents reusable knowledge, ask: *"This might be worth filing as a new topic / decision / principle page. Want me to draft one?"* Pick the category that matches the *kind* of knowledge — durable belief → principle; current operational state → topic; point-in-time choice → decision. Propose the draft after the user agrees, following *Wiki maintenance discipline* in the wiki's `CLAUDE.md`.
 
 ## Citation discipline
 
@@ -1880,11 +1962,11 @@ Expected: All tests pass (smoke, root-files, manifests, templates, commands, age
 - smoke: 1
 - root-files: 3
 - manifests: 5
-- templates: 14
-- commands: 13
+- templates: 19 (added principle.md cases + index.md Principles section + CLAUDE.md Layout/categories checks)
+- commands: 15 (added principles/ scaffolding + meta principles[] checks for /context-init)
 - agents: 7
-- skills: 21
-- Total: ~64 tests, all passing.
+- skills: 22 (added question-kind routing check for context-query)
+- Total: ~72 tests, all passing.
 
 If any fail, fix inline before continuing.
 
@@ -1941,8 +2023,8 @@ Run this sequence end-to-end to validate the install / scaffold / connect / onbo
 mkdir ~/playground/example-context-store && cd ~/playground/example-context-store
 /context-init
 # Verify scaffolded files:
-ls -A                                              # → .git CLAUDE.md index.md log.md topics decisions raw .repo-context-meta.json
-cat .repo-context-meta.json | python3 -m json.tool # → kind: repo-context-store, schema_version: 1, empty topics/decisions arrays
+ls -A                                              # → .git CLAUDE.md index.md log.md topics decisions principles raw .repo-context-meta.json
+cat .repo-context-meta.json | python3 -m json.tool # → kind: repo-context-store, schema_version: 1, empty topics/decisions/principles arrays
 git log --oneline                                  # → one commit: "Initialise repo-context store"
 
 # 3. Push it to a remote (create a new repo on github/gitlab).
@@ -1959,7 +2041,7 @@ cd /path/to/your/satellite-repo
 #   - You accept (or edit / reject) each. Accepted seeds are committed inside the wiki submodule.
 #   - Append a log entry. Commit the satellite repo with "Add repo-context wiki submodule".
 # Verify:
-ls wiki/                                           # → CLAUDE.md index.md log.md topics/ decisions/ raw/ .repo-context-meta.json (plus any seeds)
+ls wiki/                                           # → CLAUDE.md index.md log.md topics/ decisions/ principles/ raw/ .repo-context-meta.json (plus any seeds)
 cat wiki/log.md                                    # → init entry + connect entry + onboard entry
 grep -A 3 "BEGIN repo-context" CLAUDE.md           # → the satellite fragment
 
