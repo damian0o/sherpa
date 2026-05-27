@@ -6,7 +6,7 @@ This repository hosts a Claude Code marketplace whose first (and currently only)
 
 The design borrows substantively from `understand-anything` (github.com/Lum1104/Understand-Anything): the analyzer-subagent pattern, fingerprint-based change classification, AST-driven extraction during repo scanning, the derived-graph JSON index, the dashboard, and the SessionStart / PostToolUse hook patterns. What it does *not* borrow is `understand-anything`'s core domain: code-structure modelling is used inside this plugin as a means to populate the wiki, but the wiki itself stays text-shaped (markdown + front-matter), because the artefact we ship to users is coordination context, not a structural model of their code.
 
-The plugin also treats `superpowers` (github.com/obra/superpowers) and `agency-agents` (github.com/msitarzewski/agency-agents) as **recommended upstream companions**. Skills delegate to upstream skills and agents at well-defined moments — verification gates, parallel dispatch, repo orientation, git-workflow discipline, code review — falling back to internal logic if the upstream isn't installed. See *Upstream plugin integration* below.
+The plugin also treats three upstream plugins — `superpowers` (github.com/obra/superpowers), `agency-agents` (github.com/msitarzewski/agency-agents), and `karpathy-guidelines` (github.com/multica-ai/andrej-karpathy-skills) — as **recommended companions**. Skills delegate to upstream skills and agents at well-defined moments — verification gates, parallel dispatch, repo orientation, git-workflow discipline, code review — falling back to internal logic if the upstream isn't installed. A separate set of **MCP server companions** (Figma, Playwright, GitHub, Slack, project-management) enrich specific skills when configured in the user's `~/.claude/settings.json`. See *Upstream plugin integration* below.
 
 ## Goal
 
@@ -179,7 +179,7 @@ Each skill ships as `skills/<name>/SKILL.md` with a `description` front-matter f
 
 #### `context-diff`
 
-*Activate when:* a satellite has staged or uncommitted changes touching cross-cutting concerns, or invoked explicitly.
+*Activate when:* the user explicitly invokes it (e.g. `/context-diff` or a typed request to "check what wiki updates this commit needs"). The PostToolUse hook nudges the user toward invoking it after relevant commits, but the skill itself does not auto-fire on file system events.
 
 *Dispatches:* the diff classifier in `lib/fingerprint.ts`; `contracts-analyzer` if API surface changed.
 
@@ -194,7 +194,7 @@ Each skill ships as `skills/<name>/SKILL.md` with a `description` front-matter f
 
 #### `context-tour`
 
-*Activate when:* a new agent / session starts in a satellite, or the user asks for a tour of the wiki.
+*Activate when:* the user explicitly asks for a tour / overview / walkthrough of the wiki. Not auto-fired on session start — the SessionStart hook already injects a lighter reminder; this skill produces the fuller walkthrough on demand.
 
 *Dispatches:* `tour-builder` sub-agent.
 
@@ -479,7 +479,7 @@ Skills and hooks discriminate on one marker file. The file lives at the repo roo
 }
 ```
 
-The `topics` and `decisions` arrays are the derived graph index. They are rebuilt by `graph-reviewer` during `context-lint` and during `/context-init` and `context-onboard-satellite`. They are never edited by hand. The markdown files are the source of truth.
+The `topics` and `decisions` arrays are the derived graph index. They are rebuilt by `graph-reviewer` during `context-lint` and during `context-onboard-satellite` (after seeds are written). `/context-init` writes them as empty arrays directly — no rebuild needed because there's nothing to derive yet. They are never edited by hand; markdown files are the source of truth.
 
 **Detection logic** (used by skills, sub-agents, and hooks):
 
@@ -550,12 +550,12 @@ v1.0 is considered acceptance-passed when (a) the second-satellite onboarding pr
 
 The full feature set is intentionally large because the user wants to explore the design space. The implementation plan (next step) should sequence the work; not everything ships in the first release. Recommended bands:
 
-- **v0.1 (smoke test):** marketplace shape, `/context-init`, `/context-connect`, `context-onboard-satellite` with just `repo-scanner` (no AST), `context-query`, `context-satellite`. Skills can write to the wiki, but no analyzer sub-agents, no hooks, no derived graph, no dashboard.
+- **v0.1 (smoke test):** marketplace shape, `/context-init`, `/context-connect`, `context-onboard-satellite` driven by `repo-scanner` only (no `architecture-`, `domain-`, `contracts-analyzer`, no AST), `context-query`, `context-satellite`. Skills can write to the wiki, but no further analyzer sub-agents, no hooks, no derived graph, no dashboard.
 - **v0.2 (the wiki maintains itself):** add `context-ingest`, `context-lint` with `lint-reporter` + `graph-reviewer`, the derived `topics`/`decisions` graph in the meta file, the SessionStart hook.
 - **v0.3 (cross-repo sync):** add `context-diff`, `lib/fingerprint.ts`, `contracts-analyzer` with `lib/ast-extract.ts`, the PostToolUse hook.
 - **v0.4 (richer onboarding):** add `architecture-analyzer`, `domain-analyzer`, `article-analyzer`.
 - **v0.5 (read-side polish):** add `context-tour` and `tour-builder`.
 - **v1.0:** add `packages/dashboard/`.
-- **v1.1 (output formats):** add `context-present` skill that renders a wiki section, a topic walkthrough, or a tour as a [Slidev](https://github.com/slidevjs/slidev) deck. Emits `presentations/<slug>.slidev.md` for the user to preview with `slidev` (installed independently) or commit alongside the wiki. Ships a `templates/slidev-deck.md` starter. No new dependencies on the plugin itself.
+- **v1.1 (output formats):** add `context-present` skill that renders a wiki section, a topic walkthrough, or a tour as a [Slidev](https://github.com/slidevjs/slidev) deck. Emits `presentations/<slug>.slidev.md` for the user to preview with `slidev` (installed independently) or commit alongside the wiki. Ships a new `templates/slidev-deck.md` (added to `plugins/repo-context/templates/` in this version, not earlier). No new dependencies on the plugin itself.
 
 The plan can revise this. The point is that the spec captures the full design; the plan decides which slices ship together.
