@@ -125,7 +125,9 @@ Each skill ships as `skills/<name>/SKILL.md` with a `description` front-matter f
 
 *Dispatches:* `article-analyzer` sub-agent (entity/claim extraction).
 
-*Procedure:* read the source → `article-analyzer` returns extracted entities, claims, and candidate cross-references → write `raw/<slug>.md` summary → update/create relevant `topics/*.md` pages with new claims and `[[wikilinks]]` → flag contradictions inline (`> ⚠️ contradicts [[other-page]]: …`) → append to `log.md` → update `index.md` and the topics array in `.repo-context-meta.json`.
+*Agent input contract:* the skill passes the source's absolute path (for files), URL (for web articles), or raw content (for short text snippets pasted into chat), plus a *size band* hint (`short` / `substantial`) computed from `wc -w` or content length. The agent uses the size band to decide depth of extraction. Source identifier is normalised by the skill into a slug for `raw/<slug>.md`.
+
+*Procedure:* normalise source → if `substantial` (>1 file or >5 KB), optionally invoke `superpowers:brainstorming` first → `article-analyzer` returns extracted entities, claims, and candidate cross-references → write `raw/<slug>.md` summary → update/create relevant `topics/*.md` pages with new claims and `[[wikilinks]]` → flag contradictions inline (`> ⚠️ contradicts [[other-page]]: …`) → append to `log.md` → update `index.md` and the topics array in `.repo-context-meta.json`.
 
 #### `context-query`
 
@@ -156,7 +158,13 @@ Each skill ships as `skills/<name>/SKILL.md` with a `description` front-matter f
 - **Reading.** Before significant work, scan `wiki/index.md` and topic pages whose `repos:` front-matter includes this repo. Use that context.
 - **Writing-back.** When a change touches cross-cutting concerns, update the relevant `wiki/topics/*.md` or add a `wiki/decisions/*.md`, append a log entry, stage inside the submodule.
 
-*Submodule discipline (must be in the skill body):* edits happen on a real branch inside the submodule. `cd wiki && git checkout main && <edits> && git add … && git commit`. Then return to the satellite and bump the submodule pointer. Without this discipline the commits become orphaned in detached-HEAD state.
+*Submodule discipline (must be in the skill body):*
+
+1. **Pre-check.** Detect the submodule's default branch (read `wiki/.git` or `git -C wiki remote show origin | grep HEAD branch`) — don't assume `main`. Verify the submodule working tree is clean (`git -C wiki status --porcelain` is empty).
+2. **If dirty or already on an unexpected branch**, escalate to the user with the current state and refuse to proceed. The skill does not auto-recover from arbitrary pre-existing submodule state — that's the user's domain.
+3. **If clean**, `cd wiki && git checkout <default-branch> && <edits> && git add … && git commit`. Then return to the satellite and bump the submodule pointer.
+
+Without this discipline the commits become orphaned in detached-HEAD state. The pre-check is what protects the user.
 
 *Worktree-awareness:* the skill resolves the satellite's real repo root before checking for `wiki/.repo-context-meta.json`, so ephemeral worktrees don't break detection.
 
@@ -173,9 +181,9 @@ Each skill ships as `skills/<name>/SKILL.md` with a `description` front-matter f
    - **Architecture analyzer** detects layered / microservice / monolith / hexagonal patterns from directory structure and import graphs (via `lib/ast-extract.ts`).
    - **Domain analyzer** extracts business-flow vocabulary and named domain concepts from naming conventions and module structure.
    - **Contracts analyzer** uses `lib/ast-extract.ts` (tree-sitter) to extract API surface: HTTP routes, GraphQL schema, RPC definitions, message formats, exported types. This is the most code-structure-aware step.
-3. The skill reconciles all three outputs against the existing wiki — reads `wiki/index.md` and topic pages already tagged with this satellite's name. Avoids duplicating what an earlier satellite contributed; proposes extensions/merges instead.
-4. Presents a single combined proposal to the user as bullets ("+ new topics/api-contract.md (REST routes in be/src/routes/)" / "+ extend topics/auth.md (be-side JWT validation)"). User accepts, edits, or rejects per item.
-5. Writes accepted seeds in a single commit inside the wiki submodule. Updates `index.md` and the derived-graph index. Appends a `## [DATE] onboard | <satellite>` entry.
+3. The skill reconciles all three outputs against the existing wiki, using the **satellite identifier** from `repo-scanner`'s output (the `slug` field): reads `wiki/index.md` and topic pages whose `repos:` front-matter includes that slug. Avoids duplicating what an earlier satellite contributed; proposes extensions/merges instead.
+4. Presents a single combined proposal to the user as bullets ("+ new topics/api-contract.md (REST routes in be/src/routes/), `repos: [<slug>]`" / "+ extend topics/auth.md (be-side JWT validation), add `<slug>` to `repos:`"). User accepts, edits, or rejects per item.
+5. Writes accepted seeds in a single commit inside the wiki submodule. **The skill writes the `repos:` front-matter field** — set to `[<slug>]` for new pages, extended with `<slug>` for existing pages it's adding to. Updates `index.md` and the derived-graph index. Appends a `## [DATE] onboard | <slug>` entry to `log.md`.
 
 #### `context-diff`
 
@@ -188,7 +196,7 @@ Each skill ships as `skills/<name>/SKILL.md` with a `description` front-matter f
 1. Run `lib/fingerprint.ts` over the diff. Classify each changed file as STRUCTURAL (signature changes, schema migrations, new endpoints, env var changes, manifest changes) or COSMETIC (formatting, comments, internal logic only).
 2. If all changes are COSMETIC, exit silently.
 3. For STRUCTURAL changes, identify affected wiki topics by matching changed-file paths and extracted symbols to topic pages' `repos:` and content references.
-4. **Verification gate (evidence before claims):** before proposing any wiki update, re-extract the relevant symbols from the *current* satellite source (not the diff) via `contracts-analyzer`. Discard any proposal whose claimed symbol no longer exists at the path the diff implied (it was renamed, moved, or reverted). This prevents proposing wiki edits for changes that no longer hold.
+4. **Verification gate (evidence before claims):** before proposing any wiki update, re-extract the relevant symbols from the *current* satellite source (not the diff) via `contracts-analyzer`. Discard any proposal whose claimed symbol no longer exists at the path the diff implied (it was reverted) or whose contents have already diverged from what the diff captured. **Conservative-by-design caveat:** symbols that were *renamed* or *moved* will also be discarded — the gate cannot distinguish "removed" from "moved-and-renamed". The user can re-invoke `/context-diff` with explicit rename mappings if needed.
 5. Propose specific wiki updates to the user ("+ topics/api-contract.md needs `POST /v2/orders` added"). User accepts, edits, or rejects.
 6. Write accepted updates inside the wiki submodule, stage but do not push.
 
@@ -258,6 +266,10 @@ The `repo-scanner` agent's contract — its output is consumed by `context-onboa
 ```markdown
 # Repo Orientation Map
 
+## Satellite identifier
+- **slug**: [kebab-case identifier used in wiki front-matter `repos:` arrays — derived from git remote origin if present (`<org>/<repo>` → `<repo>`), otherwise from the working directory basename]
+- **remote URL**: [git remote origin url, or "(none)"]
+
 ## 1-line summary
 [One sentence: what this repo is.]
 
@@ -291,10 +303,10 @@ The other seven agents follow the same six-section template; each defines its ow
 
 ### Hooks
 
-`plugins/repo-context/hooks/hooks.json` declares two passive hooks. Neither mutates the wiki; both inject text reminders into the agent's prompt.
+`plugins/repo-context/hooks/hooks.json` declares two hooks. **Neither mutates the wiki, the satellite, or any other file.** Both inject text into the agent's session prompt — which is more than purely passive (the injected text shapes how the agent behaves) but stops short of automatic mutation. The line we hold is: hooks can *influence* via context, never *act* via file system or git.
 
 - **SessionStart** — fires when a session opens. Detects whether the working directory is a satellite (`wiki/.repo-context-meta.json` exists) or a context-store (`.repo-context-meta.json` at root). Injects the content of `session-start-prompt.md`, which is parameterised at hook time: it includes the current repo's role (satellite vs store), a pointer to `wiki/CLAUDE.md`, the count of `status: active` topic pages, and the staleness of the wiki (days since most recent log entry). The pattern is borrowed from `understand-anything`'s `auto-update-prompt.md` — dynamic content based on current state, not a static reminder.
-- **PostToolUse** — fires after Bash tool uses. If the bash command was a `git commit` inside a satellite that has the wiki submodule, and the commit touched files matching cross-cutting patterns (`routes/`, `schema/`, `.env*`, `Dockerfile`, `openapi.yaml`, `*.proto`, `*.graphql`, migration files), inject the content of `post-commit-prompt.md`: a hint suggesting `/context-diff` be run against the just-committed change. No automatic mutation.
+- **PostToolUse** — fires after Bash tool uses. If the bash command was a `git commit` inside a satellite that has the wiki submodule, and the commit touched files matching cross-cutting patterns (`routes/`, `schema/`, `.env*`, `Dockerfile`, `openapi.yaml`, `*.proto`, `*.graphql`, migration files), inject the content of `post-commit-prompt.md`: a hint suggesting `/context-diff` be run against the just-committed change. **Known noise:** the hook fires on path patterns, not on semantic intent — a revert commit that touches `routes/` still triggers the hint. The `context-diff` verification gate is the protection against acting on false positives (re-extraction of current state catches the revert), so the noise is acceptable. No automatic mutation.
 
 Both hooks are no-ops in repos without the marker file.
 
@@ -550,9 +562,9 @@ v1.0 is considered acceptance-passed when (a) the second-satellite onboarding pr
 
 The full feature set is intentionally large because the user wants to explore the design space. The implementation plan (next step) should sequence the work; not everything ships in the first release. Recommended bands:
 
-- **v0.1 (smoke test):** marketplace shape, `/context-init`, `/context-connect`, `context-onboard-satellite` driven by `repo-scanner` only (no `architecture-`, `domain-`, `contracts-analyzer`, no AST), `context-query`, `context-satellite`. Skills can write to the wiki, but no further analyzer sub-agents, no hooks, no derived graph, no dashboard.
-- **v0.2 (the wiki maintains itself):** add `context-ingest`, `context-lint` with `lint-reporter` + `graph-reviewer`, the derived `topics`/`decisions` graph in the meta file, the SessionStart hook.
-- **v0.3 (cross-repo sync):** add `context-diff`, `lib/fingerprint.ts`, `contracts-analyzer` with `lib/ast-extract.ts`, the PostToolUse hook.
+- **v0.1 (smoke test, skeletal):** marketplace shape, `/context-init`, `/context-connect`, `context-onboard-satellite` driven by `repo-scanner` only (no `architecture-`, `domain-`, `contracts-analyzer`, no AST), `context-query`, `context-satellite`. Skills can write to the wiki, but no further analyzer sub-agents, no hooks, no derived graph, no dashboard, no `context-lint`, no `context-diff`, no `context-ingest`. **Honest framing:** v0.1 validates the install / submodule / scaffold path end-to-end. It does NOT yet deliver the headline "cross-cutting context" value — that comes online in v0.2 (lint + ingest) and v0.3 (diff + contracts extraction). The wiki content produced by v0.1's onboarding will be README-shaped, not contract-shaped.
+- **v0.2 (the wiki maintains itself):** add `context-ingest` (with `article-analyzer`), `context-lint` (with `lint-reporter` + `graph-reviewer`), the derived `topics`/`decisions` graph in the meta file, the SessionStart hook. This is the band where the wiki stops being write-only and starts being a maintained artifact.
+- **v0.3 (cross-repo sync):** add `context-diff`, `lib/fingerprint.ts`, `contracts-analyzer` with `lib/ast-extract.ts`, the PostToolUse hook. This delivers the headline use case from the introduction — agents in any satellite contribute to and reconcile against the shared wiki.
 - **v0.4 (richer onboarding):** add `architecture-analyzer`, `domain-analyzer`, `article-analyzer`.
 - **v0.5 (read-side polish):** add `context-tour` and `tour-builder`.
 - **v1.0:** add `packages/dashboard/`.
