@@ -6,6 +6,8 @@ This repository hosts a Claude Code marketplace whose first (and currently only)
 
 The design borrows substantively from `understand-anything` (github.com/Lum1104/Understand-Anything): the analyzer-subagent pattern, fingerprint-based change classification, AST-driven extraction during repo scanning, the derived-graph JSON index, the dashboard, and the SessionStart / PostToolUse hook patterns. What it does *not* borrow is `understand-anything`'s core domain: code-structure modelling is used inside this plugin as a means to populate the wiki, but the wiki itself stays text-shaped (markdown + front-matter), because the artefact we ship to users is coordination context, not a structural model of their code.
 
+The plugin also treats `superpowers` (github.com/obra/superpowers) and `agency-agents` (github.com/msitarzewski/agency-agents) as **recommended upstream companions**. Skills delegate to upstream skills and agents at well-defined moments — verification gates, parallel dispatch, repo orientation, git-workflow discipline, code review — falling back to internal logic if the upstream isn't installed. See *Upstream plugin integration* below.
+
 ## Goal
 
 Give a developer who maintains several repos that collaborate toward a common task (e.g. fe + be + infra) a turnkey way to stand up a shared, LLM-maintained wiki that every repo's agents can read from and contribute to. The user's own fe + be is the dogfooding target; the plugin must be generic enough for other repo groups too.
@@ -389,6 +391,42 @@ The same conventions apply to `agents/<name>.md` (which use the six-section temp
 
 `packages/dashboard/` is a TypeScript package that renders the wiki as a navigable graph view, consumed from `.repo-context-meta.json` plus the markdown files. It exposes a CLI (`repo-context-dashboard`) that opens a local HTTP server serving an HTML view of the topics, decisions, and their cross-references. It is bundled in the marketplace but **not required** to use the plugin — skills work without it. The package is its own workspace and can be built independently.
 
+## Upstream plugin integration
+
+The plugin treats two upstream plugins as recommended companions:
+
+- **`superpowers`** (github.com/obra/superpowers) — workflow discipline: brainstorming, planning, parallel dispatch, verification gates, debugging.
+- **`agency-agents`** (github.com/msitarzewski/agency-agents) — specialised engineering personas: code review, onboarding, git-workflow expertise, domain-specific roles.
+
+**Coupling is soft.** The plugin works standalone. When a skill's procedure calls for an upstream skill or agent and the upstream is not installed, the skill falls back to its own internal logic and logs a one-line hint to the user: `"Tip: install <plugin> for richer behavior here."` Re-runs after install pick up the upgraded behavior automatically.
+
+The README and the contributor `CLAUDE.md` list both upstream plugins under a *Recommended companions* heading with one-line install commands.
+
+### Integration map
+
+Concrete delegation points. Each row names a moment inside one of our entry points where the skill body explicitly invokes an upstream skill or agent via the Skill / Task tool. Where no upstream is available, the skill executes the corresponding internal procedure.
+
+| Our entry point | Moment | Upstream invoked | Why |
+|---|---|---|---|
+| `context-onboard-satellite` | Start of parallel sub-agent dispatch | `superpowers:dispatching-parallel-agents` | Use the proven coordination pattern; avoid re-implementing the dispatch wrapper. |
+| `context-onboard-satellite` | Repo orientation step (instead of internal `repo-scanner`) | `agency-agents:engineering-codebase-onboarding-engineer` | Its output schema is what we adopted for the Repo Orientation Map; delegate instead of duplicating. |
+| `context-onboard-satellite` | When > 5 wiki pages would be written in one onboard | `superpowers:writing-plans` → `superpowers:executing-plans` | Phase large wiki seeds with review checkpoints. |
+| `context-diff` | Verification gate | `superpowers:verification-before-completion` | "Evidence before claims" as an active discipline, not just a procedural note. |
+| `context-diff` | Reviewing the proposed wiki updates before presenting to user | `agency-agents:engineering-code-reviewer` | Structured review with severity tags; matches our lint output tags. |
+| `context-satellite` | Submodule commit dance (write-back) | `agency-agents:engineering-git-workflow-master` | Detached HEAD avoidance and pointer-bump discipline are exactly its domain. |
+| `context-ingest` | Source is substantial (file count > 1 or size > 5 KB) | `superpowers:brainstorming` | Explore the source's intent and target topics before extraction. Skipped for short routine sources. |
+| `context-lint` | Unexpected finding (e.g., an orphan that "shouldn't be possible") | `superpowers:systematic-debugging` | Root-cause the wiki state mismatch instead of just reporting it. |
+| `context-query` | Code-domain question (working from a satellite, question references code/architecture/API) | `agency-agents:engineering-<role>` (backend-architect, frontend-developer, devops-automator, …) | Dispatch domain questions to specialised personas. |
+
+### Out of scope from upstream
+
+These upstream skills/agents are **not** invoked by the plugin, to avoid bureaucratising routine operations:
+
+- `superpowers:brainstorming` for routine wiki edits — only invoked for substantial new topic creation.
+- `superpowers:test-driven-development` — wiki content isn't testable in TDD's sense. (Useful for plugin development itself, but not at runtime.)
+- `superpowers:finishing-a-development-branch` — wiki commits are scoped operations, no branch lifecycle.
+- `agency-agents` non-engineering personas (marketing, sales, design, paid-media, etc.) — out of scope for cross-repo coordination.
+
 ## Detection mechanism
 
 Skills and hooks discriminate on one marker file. The file lives at the repo root of the context-store and is reached by satellites via the submodule path `wiki/.repo-context-meta.json`.
@@ -471,6 +509,7 @@ v1.0 is considered acceptance-passed when (a) the second-satellite onboarding pr
 - **AST parsing is bounded to the onboarding and diff paths.** Wiki content itself remains markdown; tree-sitter is a populating mechanism, not a representation.
 - **Multi-platform aliases.** `AGENTS.md` and `GEMINI.md` at the repo root are symlinks to `CLAUDE.md`, so agents on platforms other than Claude Code still find the contributor guide.
 - **Verification gate.** No sub-agent proposal becomes a wiki write or a lint finding without re-checking the underlying facts against current source. The dispatching skill enforces this.
+- **Upstream coupling is soft, not hard.** The plugin works standalone. Integration points with `superpowers` and `agency-agents` are explicit and named (see *Upstream plugin integration*); each falls back to internal logic with a one-line install hint if the upstream isn't present.
 
 ## Phasing recommendation (for the implementation plan)
 
