@@ -438,6 +438,20 @@ Concrete delegation points. Each row names a moment inside one of our entry poin
 | `context-lint` | Unexpected finding (e.g., an orphan that "shouldn't be possible") | `superpowers:systematic-debugging` | Root-cause the wiki state mismatch instead of just reporting it. |
 | `context-query` | Code-domain question (working from a satellite, question references code/architecture/API) | `agency-agents:engineering-<role>` (backend-architect, frontend-developer, devops-automator, …) | Dispatch domain questions to specialised personas. |
 
+### MCP server companions
+
+Orthogonal to plugins: [MCP servers](https://modelcontextprotocol.io) are configured in the user's `~/.claude/settings.json` and become tools the agent can call. The plugin doesn't bundle any — it just instructs specific skills to *use them if available* and fall back otherwise. Same soft-coupling pattern as the recommended plugin companions.
+
+| MCP server | Skill that enriches | How |
+|---|---|---|
+| **Figma** | `context-onboard-satellite` (frontend repos), `context-ingest` (design specs) | When onboarding a frontend satellite and the user references a Figma URL, the analyzer reads the file structure, design tokens, and component names. Wiki topics can carry `figma: <node-url>` in front-matter for deep links. |
+| **Playwright** | `context-diff` verification gate, `context-satellite` write-back for UI/HTTP changes | The "evidence before claims" gate gets real teeth: before proposing "route `/v2/orders` behaves as X", Playwright drives the route and confirms. Catches stale extractions where the symbol exists but the behavior changed. Topics can carry `playwright-spec: <path>` referencing a recorded scenario. |
+| **GitHub** | `context-onboard-satellite`, `context-satellite`, `context-lint` | Read PRs, issues, labels, and reviews across satellites without leaving the wiki workflow. Lint can flag wiki decisions that contradict open PRs or merged-but-not-documented changes. |
+| **Slack** | `context-ingest` | Ingest a thread, channel summary, or pinned message into a `raw/` summary + topic proposal. Per TODO.md ("fed by Slack threads, meeting transcripts"). |
+| **Project-management (Jira / GitHub Projects / Linear)** | `context-ingest`, `context-satellite`, `context-lint` | Cross-reference wiki topics and decisions with open tickets / project items. Lint surfaces drift: topic pages with `status: active` that have no corresponding open ticket; tickets closed without a wiki decision; sprint goals that aren't reflected anywhere in the wiki. Topics carry `tracker: <id>` (e.g. `JIRA-1234`, `gh-org/repo#42`, `lin/eng-77`) in front-matter. |
+
+**Front-matter extension:** topic and decision pages may carry additional optional fields when relevant — `figma:`, `playwright-spec:`, `tracker:`, `sentry-incident:` — picked up by skills (and the dashboard) for deep links. No schema migration; unknown fields are tolerated.
+
 ### Out of scope from upstream
 
 These upstream skills/agents are **not** invoked by the plugin, to avoid bureaucratising routine operations:
@@ -530,6 +544,7 @@ v1.0 is considered acceptance-passed when (a) the second-satellite onboarding pr
 - **Multi-platform aliases.** `AGENTS.md` and `GEMINI.md` at the repo root are symlinks to `CLAUDE.md`, so agents on platforms other than Claude Code still find the contributor guide.
 - **Verification gate.** No sub-agent proposal becomes a wiki write or a lint finding without re-checking the underlying facts against current source. The dispatching skill enforces this.
 - **Upstream coupling is soft, not hard.** The plugin works standalone. Integration points with `superpowers` and `agency-agents` are explicit and named (see *Upstream plugin integration*); each falls back to internal logic with a one-line install hint if the upstream isn't present.
+- **MCP servers are enrichments, not dependencies.** Specific skills know how to use Figma, Playwright, GitHub, Slack, and project-management MCPs when configured; they fall back when absent. The plugin never bundles MCP servers.
 
 ## Phasing recommendation (for the implementation plan)
 
