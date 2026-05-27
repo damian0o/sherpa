@@ -259,18 +259,18 @@ A second plugin can be added to the same marketplace later without restructuring
 
 ## Dogfooding plan (acceptance for v1)
 
-Sequence the user runs once the plugin is built:
+Sequence the user runs once the plugin is built. Assumes at least two real satellite repos are available (the user's case is `fe` and `be`, but any two will exercise the reconciliation path).
 
 1. Install from local path: `claude plugin marketplace add ./` (from this directory), then install `repo-context`.
-2. `mkdir ~/playground/repo-context-store`, `cd` into it, run `/context-init`, push to a remote.
-3. From the existing `fe` repo: `/context-connect <store-url>`. The onboarding skill scans fe and proposes seed pages; the user reviews and accepts.
-4. From the existing `be` repo: `/context-connect <store-url>`. The onboarding skill reconciles against what fe contributed and proposes extensions / merges, not duplicates.
-5. Use the wiki for a week of real fe + be work — ingest a source, ask a query, run a lint. Capture friction.
+2. Create an empty directory for the context store, `cd` into it, run `/context-init`, push to a remote.
+3. From the first satellite repo: `/context-connect <store-url>`. The onboarding skill scans the repo and proposes seed pages; the user reviews and accepts.
+4. From the second satellite repo: `/context-connect <store-url>`. The onboarding skill reconciles against what the first satellite contributed and proposes extensions / merges, not duplicates.
+5. Use the wiki for ~a week of real work across both satellites — ingest a source, ask a query, run a lint. Capture friction.
 
-v1 is considered acceptance-passed when the user reports that fe + be coordination feels concretely better (the wiki is being read before changes and updated after them), and the onboarding-second-satellite reconciliation worked without duplicate topic pages.
+v1 is considered acceptance-passed when (a) the user reports that cross-repo coordination feels concretely better (the wiki is being read before significant changes and updated after them), and (b) the second-satellite onboarding produced extensions rather than duplicate topic pages.
 
-## Open questions deferred to planning
+## Resolved design choices (recorded so they don't drift)
 
-- Exact JSON shape for `.repo-context-meta.json` beyond `kind` and `schema_version`.
-- Whether `context-satellite` should auto-detect cross-cutting changes from a diff, or rely on the user/agent's judgment to invoke it. (Lean: judgment, with the skill description naming the typical triggers.)
-- Whether `context-onboard-satellite` should write a single combined commit in the wiki or one commit per seed page. (Lean: single commit, easier to review.)
+- **`.repo-context-meta.json` schema for v1** is exactly `{"kind": "repo-context-store", "schema_version": 1}`. No further fields. Adding fields later means bumping `schema_version` and updating the skills' detection logic.
+- **`context-satellite` does not auto-scan diffs.** It relies on the agent's judgment, with the skill description naming typical triggers (API contract change, env var addition, deployment change, runtime/version bump, an explicit decision). This avoids the skill becoming an over-eager linter on every change.
+- **`context-onboard-satellite` writes a single combined commit** inside the wiki submodule covering all accepted seeds, with a commit message summarising what was added. Easier to review than one commit per seed.
