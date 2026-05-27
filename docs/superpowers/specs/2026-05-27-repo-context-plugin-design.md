@@ -75,6 +75,9 @@ llm-wiki-impl/                              # this repo is the *marketplace* rep
       src/                                  # consumes .repo-context-meta.json
   docs/
     superpowers/specs/                      # design docs and plans
+  CLAUDE.md                                 # contributor guide for this repo
+  AGENTS.md                                 # symlink → CLAUDE.md (multi-platform)
+  GEMINI.md                                 # symlink → CLAUDE.md (multi-platform)
   README.md
   LICENSE
   package.json                              # workspace manifest if needed
@@ -134,7 +137,13 @@ Each skill ships as `skills/<name>/SKILL.md` with a `description` front-matter f
 
 *Dispatches:* `lint-reporter` and `graph-reviewer` sub-agents.
 
-*Procedure:* `graph-reviewer` rebuilds the derived graph in `.repo-context-meta.json` from markdown and reports structural issues (orphans, missing inbound links, dangling `[[link]]` targets). `lint-reporter` does the content pass (contradictions, stale claims, supersede-broken decisions, concepts repeated across pages but lacking their own page). The skill formats both into a single report with concrete suggested fixes. No auto-fixing.
+*Procedure:* `graph-reviewer` rebuilds the derived graph in `.repo-context-meta.json` from markdown and reports structural issues (orphans, missing inbound links, dangling `[[link]]` targets). `lint-reporter` does the content pass (contradictions, stale claims, supersede-broken decisions, concepts repeated across pages but lacking their own page). The skill formats both into a single report with concrete suggested fixes, **severity-tagged**:
+
+- 🔴 **blocker** — broken cross-reference, accepted decision whose referenced topic page is missing, contradictions in the same page.
+- 🟡 **suggestion** — orphan pages, stale topics whose `updated:` is older than the latest log entry by N days, missing inbound links where two pages clearly relate.
+- 💭 **nit** — missing optional front-matter fields, inconsistent capitalisation in `[[links]]`.
+
+**Verification gate (evidence before claims):** `graph-reviewer` regenerates the derived graph from markdown *before* emitting orphan/staleness findings, so reports are based on current state rather than the previous `.repo-context-meta.json` snapshot. No auto-fixing.
 
 #### `context-satellite`
 
@@ -170,15 +179,16 @@ Each skill ships as `skills/<name>/SKILL.md` with a `description` front-matter f
 
 *Activate when:* a satellite has staged or uncommitted changes touching cross-cutting concerns, or invoked explicitly.
 
-*Dispatches:* the diff classifier in `lib/fingerprint.ts`; may dispatch `contracts-analyzer` if API surface changed.
+*Dispatches:* the diff classifier in `lib/fingerprint.ts`; `contracts-analyzer` if API surface changed.
 
 *Procedure:*
 
 1. Run `lib/fingerprint.ts` over the diff. Classify each changed file as STRUCTURAL (signature changes, schema migrations, new endpoints, env var changes, manifest changes) or COSMETIC (formatting, comments, internal logic only).
 2. If all changes are COSMETIC, exit silently.
 3. For STRUCTURAL changes, identify affected wiki topics by matching changed-file paths and extracted symbols to topic pages' `repos:` and content references.
-4. Propose specific wiki updates to the user ("+ topics/api-contract.md needs `POST /v2/orders` added"). User accepts, edits, or rejects.
-5. Write accepted updates inside the wiki submodule, stage but do not push.
+4. **Verification gate (evidence before claims):** before proposing any wiki update, re-extract the relevant symbols from the *current* satellite source (not the diff) via `contracts-analyzer`. Discard any proposal whose claimed symbol no longer exists at the path the diff implied (it was renamed, moved, or reverted). This prevents proposing wiki edits for changes that no longer hold.
+5. Propose specific wiki updates to the user ("+ topics/api-contract.md needs `POST /v2/orders` added"). User accepts, edits, or rejects.
+6. Write accepted updates inside the wiki submodule, stage but do not push.
 
 #### `context-tour`
 
@@ -190,7 +200,7 @@ Each skill ships as `skills/<name>/SKILL.md` with a `description` front-matter f
 
 ### Sub-agents
 
-Sub-agents are dispatched by skills for expensive, focused work. They live in `agents/<name>.md`. Each agent is read-only by default (it returns proposals); the dispatching skill performs writes after user review.
+Sub-agents are dispatched by skills for expensive, focused work. They live in `agents/<name>.md`. Each agent is **read-only**; the dispatching skill performs writes after user review.
 
 | Agent | Dispatched by | Job |
 |---|---|---|
@@ -202,6 +212,80 @@ Sub-agents are dispatched by skills for expensive, focused work. They live in `a
 | `lint-reporter` | `context-lint` | Content-level lint pass |
 | `graph-reviewer` | `context-lint` | Structural lint + derived-graph rebuild |
 | `tour-builder` | `context-tour` | BFS walkthrough generation |
+
+#### Agent prompt template
+
+Every `agents/<name>.md` follows the same six-section template (borrowed from `agency-agents`'s engineering-agent shape, stripped of personality flavor):
+
+```
+---
+name: <agent name>
+description: <one sentence, third-person, "Use when..." trigger>
+---
+
+# Identity
+Role, area of expertise. One paragraph.
+
+# Mission
+What this agent produces and what problem that solves. Two or three bullets.
+
+# Critical rules
+Facts-only / no-inference / read-only / scope-control rules. Imperative phrasing
+("Never write to disk", "Do not infer intent", "Quote function names exactly").
+
+# Output format
+A markdown template the agent fills in. The dispatching skill parses this format,
+so the template is a contract — agents must not deviate.
+
+# Workflow process
+Numbered steps the agent follows. Each step references a concrete file pattern,
+manifest, or tool invocation. No vague "analyze the codebase" steps.
+```
+
+The "Critical rules" section is what makes sub-agent output trustworthy. For all four onboarding analyzers and `lint-reporter`, those rules include verbatim:
+
+- **Facts only.** State only what was directly observed in the source you inspected. No inference, no speculation, no future-intent guesses.
+- **Quote exactly.** Function names, route paths, env var names, file paths — verbatim from source.
+- **Mark unknowns.** If something is not visible in the inspected source, say "not inspected" or "not present in `<file>`" — never "appears to be X".
+- **Read-only.** Never modify files, run network calls, or change repository state.
+
+#### Worked example: `repo-scanner` output format
+
+The `repo-scanner` agent's contract — its output is consumed by `context-onboard-satellite`:
+
+```markdown
+# Repo Orientation Map
+
+## 1-line summary
+[One sentence: what this repo is.]
+
+## 5-minute explanation
+- **Type**: [web app / API / monorepo / CLI / library / hybrid]
+- **Runtime**: [Node.js, Python, Go, …]
+- **Primary inputs**: [HTTP, CLI, messages, files, function args]
+- **Primary outputs**: [responses, DB writes, events, rendered UI]
+- **Entry points**: [path/to/main, path/to/router, path/to/config]
+
+## Top-level structure
+| Path | Purpose | Notes |
+|------|---------|-------|
+| `src/` | … | … |
+
+## Cross-cutting surface (the part the wiki cares about)
+- **API routes**: [path → handler file, verbatim]
+- **GraphQL/RPC contracts**: [file → schema name]
+- **Env vars referenced**: [name → file:line]
+- **Container/deployment files**: [paths]
+- **Schema/migration files**: [paths]
+
+## Files inspected
+[exhaustive list]
+
+## Files NOT inspected
+[everything else under top-level dirs, listed by name or pattern]
+```
+
+The other seven agents follow the same six-section template; each defines its own output format. Concrete output schemas for the remaining agents are recorded in the implementation plan, not duplicated here.
 
 ### Hooks
 
@@ -288,6 +372,19 @@ commits that touch routes, schema, env, or container config.
 <!-- END repo-context -->
 ```
 
+### Skill authoring conventions
+
+Borrowed from `superpowers` to keep skill quality high. Every `skills/<name>/SKILL.md` follows:
+
+- **Front-matter:** `name` (hyphenated, matches the directory), `description` (third-person, starts with "Use when…"). The description is what Claude reads to decide whether to activate the skill — it must name the *condition*, not the operation.
+- **Body opens with a 1–2 sentence statement of purpose**, then a *trigger* section (when to activate, when NOT to activate), then a *procedure* section.
+- **Red Flags table** for skills that have a tempting wrong path (e.g., `context-satellite` writing to the submodule's detached HEAD instead of a real branch). Two columns: *Thought* / *Reality*.
+- **Workflow diagram in dot-language** for skills with more than one decision point. Optional for linear skills.
+- **Voice:** assertive, second-person, evidence-driven. "Run this", "Verify that", "Do NOT". No hedging on rules; hedge on user intent only.
+- **One concrete worked example** at the bottom of each skill — a real session transcript or a worked input → output.
+
+The same conventions apply to `agents/<name>.md` (which use the six-section template defined above) and to `commands/<name>.md` (which are slash-command definitions, kept short).
+
 ### Dashboard package
 
 `packages/dashboard/` is a TypeScript package that renders the wiki as a navigable graph view, consumed from `.repo-context-meta.json` plus the markdown files. It exposes a CLI (`repo-context-dashboard`) that opens a local HTTP server serving an HTML view of the topics, decisions, and their cross-references. It is bundled in the marketplace but **not required** to use the plugin — skills work without it. The package is its own workspace and can be built independently.
@@ -372,6 +469,8 @@ v1.0 is considered acceptance-passed when (a) the second-satellite onboarding pr
 - **Sub-agents are read-only;** the dispatching skill performs writes after the user reviews.
 - **Hooks emit hints, never mutate.** This is the line between passive automation (in scope) and auto-update (out of scope).
 - **AST parsing is bounded to the onboarding and diff paths.** Wiki content itself remains markdown; tree-sitter is a populating mechanism, not a representation.
+- **Multi-platform aliases.** `AGENTS.md` and `GEMINI.md` at the repo root are symlinks to `CLAUDE.md`, so agents on platforms other than Claude Code still find the contributor guide.
+- **Verification gate.** No sub-agent proposal becomes a wiki write or a lint finding without re-checking the underlying facts against current source. The dispatching skill enforces this.
 
 ## Phasing recommendation (for the implementation plan)
 
