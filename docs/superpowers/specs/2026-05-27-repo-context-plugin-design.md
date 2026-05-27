@@ -71,6 +71,7 @@ llm-wiki-impl/                              # this repo is the *marketplace* rep
         satellite-CLAUDE.md                 # fragment for satellite CLAUDE.md
         topic.md                            # topic-page template
         decision.md                         # ADR template
+        principle.md                        # principle / durable-belief template
   packages/
     dashboard/                              # TS/HTML graph view of the wiki
       package.json
@@ -98,7 +99,7 @@ Run from an empty directory the user wants to become the context-store repo. Ste
 1. Confirm target directory; bail if non-empty.
 2. `git init` if not already a repo.
 3. Copy `templates/CLAUDE.md`, `templates/index.md`, `templates/log.md` into the target.
-4. Create directories: `topics/`, `decisions/`, `raw/`.
+4. Create directories: `topics/`, `decisions/`, `principles/`, `raw/`.
 5. Write `.repo-context-meta.json` with `{"kind": "repo-context-store", "schema_version": 1, "topics": [], "decisions": [], "updated": "<date>"}`. This is the marker file *and* the derived graph index.
 6. Initial commit.
 7. Prompt the user to push to a remote and remind them that URL is needed for `/context-connect`.
@@ -133,7 +134,7 @@ Each skill ships as `skills/<name>/SKILL.md` with a `description` front-matter f
 
 *Activate when:* the user asks a question and the working directory or any parent / submodule contains `.repo-context-meta.json`.
 
-*Procedure:* read `index.md` first, drill into relevant pages, synthesise the answer with `[[link]]` citations. After answering, offer to file the answer back as a new `topics/<slug>.md` or `decisions/<slug>.md` when worth keeping.
+*Procedure:* read `index.md` first (which sections topics, decisions, principles, sources), drill into relevant pages, synthesise the answer with `[[link]]` citations. For "how should we approach X" questions, prefer principles; for "what's the current state of X", prefer topics; for "why did we choose X", prefer decisions. After answering, offer to file the answer back as a new `topics/<slug>.md`, `decisions/<slug>.md`, or `principles/<slug>.md` when worth keeping — pick the category that matches the *kind* of knowledge, not just where it would land alphabetically.
 
 #### `context-lint`
 
@@ -143,9 +144,11 @@ Each skill ships as `skills/<name>/SKILL.md` with a `description` front-matter f
 
 *Procedure:* `graph-reviewer` rebuilds the derived graph in `.repo-context-meta.json` from markdown and reports structural issues (orphans, missing inbound links, dangling `[[link]]` targets). `lint-reporter` does the content pass (contradictions, stale claims, supersede-broken decisions, concepts repeated across pages but lacking their own page). The skill formats both into a single report with concrete suggested fixes, **severity-tagged**:
 
-- 🔴 **blocker** — broken cross-reference, accepted decision whose referenced topic page is missing, contradictions in the same page.
-- 🟡 **suggestion** — orphan pages, stale topics whose `updated:` is older than the latest log entry by N days, missing inbound links where two pages clearly relate.
+- 🔴 **blocker** — broken cross-reference, accepted decision whose referenced topic page is missing, contradictions in the same page, principle page with empty `sources:` array (a principle without traceable sources is unverifiable).
+- 🟡 **suggestion** — orphan pages, stale topics whose `updated:` is older than the latest log entry by N days, missing inbound links where two pages clearly relate, principle in `status: active` that no topic page cites (the principle isn't actually guiding anything).
 - 💭 **nit** — missing optional front-matter fields, inconsistent capitalisation in `[[links]]`.
+
+**Staleness rules differ by category.** Topics get stale if their `updated:` field falls behind by N days. Decisions don't go stale by time — they're superseded by other decisions, which lint detects via `supersedes:`. Principles don't go stale at all; `status: retired` is the only state change, and retirement is event-driven (a log entry must accompany it).
 
 **Verification gate (evidence before claims):** `graph-reviewer` regenerates the derived graph from markdown *before* emitting orphan/staleness findings, so reports are based on current state rather than the previous `.repo-context-meta.json` snapshot. No auto-fixing.
 
@@ -184,6 +187,8 @@ Without this discipline the commits become orphaned in detached-HEAD state. The 
 3. The skill reconciles all three outputs against the existing wiki, using the **satellite identifier** from `repo-scanner`'s output (the `slug` field): reads `wiki/index.md` and topic pages whose `repos:` front-matter includes that slug. Avoids duplicating what an earlier satellite contributed; proposes extensions/merges instead.
 4. Presents a single combined proposal to the user as bullets ("+ new topics/api-contract.md (REST routes in be/src/routes/), `repos: [<slug>]`" / "+ extend topics/auth.md (be-side JWT validation), add `<slug>` to `repos:`"). User accepts, edits, or rejects per item.
 5. Writes accepted seeds in a single commit inside the wiki submodule. **The skill writes the `repos:` front-matter field** — set to `[<slug>]` for new pages, extended with `<slug>` for existing pages it's adding to. Updates `index.md` and the derived-graph index. Appends a `## [DATE] onboard | <slug>` entry to `log.md`.
+
+**Onboarding rarely produces principles.** Principles come from sources (articles, talks, conversations) ingested via `context-ingest`, not from repo scanning. If `repo-scanner` surfaces something that *sounds* like a principle (e.g. a strong statement in the satellite's README), propose it as a topic page, not a principle. Promote to principle only after the user explicitly says it is one.
 
 #### `context-diff`
 
@@ -314,7 +319,14 @@ Both hooks are no-ops in repos without the marker file.
 
 #### `templates/CLAUDE.md` — schema doc written into the context-store
 
-Sections: *what this repo is*, *layout*, *conventions* (front-matter, `[[link]]`, log entry prefix `## [YYYY-MM-DD] <kind> | <title>`), *workflows* mirroring the skills, *content categories* (topics, decisions, active work — active work as a `status:` field on topic pages), *the derived `.repo-context-meta.json`* (note that it is generated, not edited).
+Sections: *what this repo is*, *layout* (including `principles/`), *conventions* (front-matter, `[[link]]`, log entry prefix `## [YYYY-MM-DD] <kind> | <title>`), *workflows* mirroring the skills, *content categories* (topics, decisions, principles, active work — active work as a `status:` field on topic pages), *the derived `.repo-context-meta.json`* (note that it is generated, not edited).
+
+The **content categories** section names four distinct kinds of content:
+
+- *Topics* (`topics/`) — present-tense, operational, evolving. "What's the current state of X."
+- *Decisions* (`decisions/`) — point-in-time choices, ADR-shaped. "We picked X over Y on date Z."
+- *Principles* (`principles/`) — timeless, durable beliefs about how we work. "We value simple systems." Rare to retire; when retired, it's a significant move that gets its own log entry.
+- *Sources* (`raw/`) — verbatim or near-verbatim ingests. The evidence layer for everything else.
 
 Plus a **Wiki maintenance discipline** section paraphrasing the Karpathy guidelines for wiki context:
 
@@ -380,6 +392,29 @@ supersedes: [[<other-decision>]]
 
 ## Consequences
 ```
+
+#### `templates/principle.md`
+
+```
+---
+adopted: YYYY-MM-DD
+status: active | retired
+sources: []
+---
+# <Principle statement>
+
+## What this means in practice
+
+## What this does not mean
+
+## Sources
+```
+
+Notes:
+
+- No `repos:` field — principles apply across the group, not to specific satellites.
+- `sources:` is a list of `[[raw/<slug>]]` links to the article summaries / conversation notes that the principle traces to. A principle without at least one source is a Red Flag at lint time.
+- *What this does not mean* exists to head off common misreadings — principles are dense and the lifelong fights live in the boundary cases.
 
 #### `templates/satellite-CLAUDE.md`
 
@@ -487,11 +522,14 @@ Skills and hooks discriminate on one marker file. The file lives at the repo roo
   "decisions": [
     {"slug": "use-postgres", "status": "accepted", "date": "2026-05-27"}
   ],
+  "principles": [
+    {"slug": "simple-systems", "status": "active", "sources": ["raw/james-dropbox-conversation"]}
+  ],
   "updated": "2026-05-27"
 }
 ```
 
-The `topics` and `decisions` arrays are the derived graph index. They are rebuilt by `graph-reviewer` during `context-lint` and during `context-onboard-satellite` (after seeds are written). `/context-init` writes them as empty arrays directly — no rebuild needed because there's nothing to derive yet. They are never edited by hand; markdown files are the source of truth.
+The `topics`, `decisions`, and `principles` arrays are the derived graph index. They are rebuilt by `graph-reviewer` during `context-lint` and during `context-onboard-satellite` (after seeds are written). `/context-init` writes them as empty arrays directly — no rebuild needed because there's nothing to derive yet. They are never edited by hand; markdown files are the source of truth.
 
 **Detection logic** (used by skills, sub-agents, and hooks):
 
@@ -547,7 +585,8 @@ v1.0 is considered acceptance-passed when (a) the second-satellite onboarding pr
 
 ## Resolved design choices
 
-- **`.repo-context-meta.json` schema:** as shown above (`kind`, `schema_version`, derived `topics`, derived `decisions`, `updated`). Markdown is the source of truth; this file is rebuilt.
+- **`.repo-context-meta.json` schema:** as shown above (`kind`, `schema_version`, derived `topics`, derived `decisions`, derived `principles`, `updated`). Markdown is the source of truth; this file is rebuilt.
+- **Four content categories, not three.** Topics (operational), decisions (point-in-time), principles (durable beliefs), sources (raw ingests). Each has its own front-matter shape and lint rules. Principles in particular don't go stale; they're either active or retired-with-a-log-entry.
 - **`context-satellite` does not auto-scan diffs.** That's `context-diff`'s job. `context-satellite` covers reading and human-judged write-back.
 - **`context-onboard-satellite` writes a single combined commit** inside the wiki submodule covering all accepted seeds.
 - **Sub-agents are read-only;** the dispatching skill performs writes after the user reviews.
