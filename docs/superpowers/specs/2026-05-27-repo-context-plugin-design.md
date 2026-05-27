@@ -304,6 +304,14 @@ Both hooks are no-ops in repos without the marker file.
 
 Sections: *what this repo is*, *layout*, *conventions* (front-matter, `[[link]]`, log entry prefix `## [YYYY-MM-DD] <kind> | <title>`), *workflows* mirroring the skills, *content categories* (topics, decisions, active work — active work as a `status:` field on topic pages), *the derived `.repo-context-meta.json`* (note that it is generated, not edited).
 
+Plus a **Wiki maintenance discipline** section paraphrasing the Karpathy guidelines for wiki context:
+
+- **Surgical page edits.** When updating an existing topic or decision page, change only what's needed. Don't restructure adjacent sections. Match the page's existing voice.
+- **Minimum content.** No placeholder padding. If a topic page section would be empty, leave it empty until there's real material to put in it. A wiki page that says less honestly is more useful than one that pads with speculation.
+- **State assumptions when ingesting.** When extracting from a source, name the assumed audience and intent at the top of the resulting `raw/<slug>.md` summary. Don't bury interpretive choices.
+- **Every proposed change cites its source.** A new claim on a topic page references either a specific `raw/` summary line or a specific code symbol from a satellite (with `repo:path:symbol`). No uncited additions.
+- **Push back on ambiguity.** If a proposed wiki update would assert something the source doesn't actually say, stop. Surface the gap to the user rather than writing the more confident version.
+
 #### `templates/index.md`
 
 ```
@@ -387,16 +395,28 @@ Borrowed from `superpowers` to keep skill quality high. Every `skills/<name>/SKI
 
 The same conventions apply to `agents/<name>.md` (which use the six-section template defined above) and to `commands/<name>.md` (which are slash-command definitions, kept short).
 
+#### Behavioral baseline (Karpathy guidelines)
+
+Borrowed from `multica-ai/andrej-karpathy-skills`. Every skill, sub-agent, and command in this plugin inherits these four operational principles — they are the default behavioral contract:
+
+1. **Think before acting.** State assumptions explicitly. If multiple interpretations of the user's request exist, present them rather than picking silently. If something is unclear, stop and name what's confusing.
+2. **Simplicity first.** Minimum content / minimum mutation. No speculative abstractions in code. No placeholder padding in wiki pages. If a topic page would have an empty section, leave it empty rather than filling it.
+3. **Surgical changes.** When updating an existing wiki page, touch only what's needed. Don't restyle adjacent content, don't restructure unrelated sections, don't "improve" comments or links that weren't part of the task. Every changed line traces directly to the triggering request.
+4. **Goal-driven, verifiable.** Each proposal carries a measurable success criterion. A wiki update proposal cites the specific source claim or code symbol it derives from. A lint finding cites the page and line. No vague "this seems off" without evidence.
+
+These principles are intentionally redundant with the verification gate, the "facts only" agent rules, and the severity tags — multiple reinforcements, one direction. Skills include a one-line link to this section instead of repeating the principles inline.
+
 ### Dashboard package
 
 `packages/dashboard/` is a TypeScript package that renders the wiki as a navigable graph view, consumed from `.repo-context-meta.json` plus the markdown files. It exposes a CLI (`repo-context-dashboard`) that opens a local HTTP server serving an HTML view of the topics, decisions, and their cross-references. It is bundled in the marketplace but **not required** to use the plugin — skills work without it. The package is its own workspace and can be built independently.
 
 ## Upstream plugin integration
 
-The plugin treats two upstream plugins as recommended companions:
+The plugin treats three upstream plugins as recommended companions:
 
 - **`superpowers`** (github.com/obra/superpowers) — workflow discipline: brainstorming, planning, parallel dispatch, verification gates, debugging.
 - **`agency-agents`** (github.com/msitarzewski/agency-agents) — specialised engineering personas: code review, onboarding, git-workflow expertise, domain-specific roles.
+- **`karpathy-guidelines`** (github.com/multica-ai/andrej-karpathy-skills) — behavioral baseline for LLM coding: anti-overcomplication, surgical changes, evidence-driven proposals. Already embedded in our skill conventions and wiki schema; the upstream skill is recommended for satellite-side coding work, not procedurally invoked by us.
 
 **Coupling is soft.** The plugin works standalone. When a skill's procedure calls for an upstream skill or agent and the upstream is not installed, the skill falls back to its own internal logic and logs a one-line hint to the user: `"Tip: install <plugin> for richer behavior here."` Re-runs after install pick up the upgraded behavior automatically.
 
