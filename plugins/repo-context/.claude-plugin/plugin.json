@@ -3,6 +3,10 @@
   "description": "Shared coordination wiki across multiple satellite repos (frontend, backend, infra). Maintained by Claude Code agents, integrated via git submodule.",
   "version": "0.1.0",
   "license": "MIT",
+  "author": {
+    "name": "Damian Ospara",
+    "email": "yietti@gmail.com"
+  },
   "keywords": [
     "wiki",
     "coordination",
