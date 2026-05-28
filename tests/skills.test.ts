@@ -48,6 +48,12 @@ describe("skills/context-onboard-satellite/SKILL.md", () => {
     expect(body).toMatch(/strip.*unconfirmed|unconfirmed.*strip/i);
   });
 
+  it("body invokes meta-syncer to sync .repo-context-meta.json before committing onboarded seeds", () => {
+    const { body } = loadMarkdown(path);
+    expect(body).toMatch(/meta-syncer/);
+    expect(body).toMatch(/meta-syncer: synced/);
+  });
+
   it("has no placeholder leftovers", () => {
     const { raw } = loadMarkdown(path);
     expect(noPlaceholders(raw)).toEqual([]);

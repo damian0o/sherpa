@@ -54,6 +54,7 @@ Onboard a satellite repository into a connected `repo-context` wiki. The skill s
      - If "extend" (always a topic page): surgical edit per the *Wiki maintenance discipline* in `wiki/CLAUDE.md` — only touch what's needed. Add `<satellite-slug>` to the topic's `repos:` array if not present. Add new sections only if proposed.
    - Update `wiki/index.md`: add a line per new page under the appropriate section (Topics or Decisions). Onboarding does not write to Principles or Sources in v0.1.
    - Append to `wiki/log.md`: `## [<date>] onboard | <satellite-slug>` followed by 2–4 bullet lines naming the seeds you wrote.
+   - **Sync `wiki/.repo-context-meta.json` via `meta-syncer`.** Use the Task tool with `subagent_type: "meta-syncer"`. Pass the absolute path of the `wiki/` submodule as the wiki root. Verify the sub-agent returns a line matching `meta-syncer: synced <wiki-root>/.repo-context-meta.json` before proceeding to the commit. This ensures the derived index reflects the new topics/decisions/principles before they are committed.
    - `git -C wiki add . && git -C wiki commit -m "Onboard <satellite-slug>: <N> seeds"`.
 7. **Return to the satellite repo.** The caller (`/context-connect`) handles the submodule pointer bump and the satellite-side commit.
 
