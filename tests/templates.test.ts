@@ -74,9 +74,21 @@ describe("templates/topic.md", () => {
     expect(frontMatter).toHaveProperty("status");
     expect(frontMatter).toHaveProperty("repos");
   });
+  it("repos: parses as an array (not null)", () => {
+    const { frontMatter } = loadMarkdown(path);
+    expect(Array.isArray(frontMatter.repos)).toBe(true);
+  });
+  it("has the {{title}} substitution marker on the H1", () => {
+    const { raw } = loadMarkdown(path);
+    expect(raw).toMatch(/^# \{\{title\}\}/m);
+  });
   it("has the standard topic sections", () => {
     const { body } = loadMarkdown(path);
     expect(hasSections(body, ["Summary", "Current state", "Decisions referenced", "Open questions", "Sources"])).toEqual([]);
+  });
+  it("has no banned placeholder strings", () => {
+    const { raw } = loadMarkdown(path);
+    expect(noPlaceholders(raw)).toEqual([]);
   });
 });
 
@@ -88,9 +100,17 @@ describe("templates/decision.md", () => {
     expect(frontMatter).toHaveProperty("date");
     expect(frontMatter).toHaveProperty("status");
   });
+  it("has the {{title}} substitution marker on the H1", () => {
+    const { raw } = loadMarkdown(path);
+    expect(raw).toMatch(/^# \{\{title\}\}/m);
+  });
   it("has Context / Decision / Consequences sections", () => {
     const { body } = loadMarkdown(path);
     expect(hasSections(body, ["Context", "Decision", "Consequences"])).toEqual([]);
+  });
+  it("has no banned placeholder strings", () => {
+    const { raw } = loadMarkdown(path);
+    expect(noPlaceholders(raw)).toEqual([]);
   });
 });
 
@@ -103,6 +123,14 @@ describe("templates/principle.md", () => {
     expect(frontMatter).toHaveProperty("status");
     expect(frontMatter).toHaveProperty("sources");
   });
+  it("sources: parses as an array (not null)", () => {
+    const { frontMatter } = loadMarkdown(path);
+    expect(Array.isArray(frontMatter.sources)).toBe(true);
+  });
+  it("has the {{title}} substitution marker on the H1", () => {
+    const { raw } = loadMarkdown(path);
+    expect(raw).toMatch(/^# \{\{title\}\}/m);
+  });
   it("has 'What this means in practice' and 'What this does not mean' sections", () => {
     const { body } = loadMarkdown(path);
     expect(hasSections(body, ["What this means in practice", "What this does not mean", "Sources"])).toEqual([]);
@@ -110,6 +138,10 @@ describe("templates/principle.md", () => {
   it("does not have a repos: field (principles are not satellite-scoped)", () => {
     const { frontMatter } = loadMarkdown(path);
     expect(frontMatter).not.toHaveProperty("repos");
+  });
+  it("has no banned placeholder strings", () => {
+    const { raw } = loadMarkdown(path);
+    expect(noPlaceholders(raw)).toEqual([]);
   });
 });
 

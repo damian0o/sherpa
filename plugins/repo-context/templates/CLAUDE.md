@@ -18,7 +18,7 @@ A shared, LLM-maintained wiki across multiple satellite repositories (e.g. front
 
 ## Conventions
 
-- **Front-matter (YAML)** on every topic and decision page. Required: `updated:` (YYYY-MM-DD), `status:`, `repos:` (array of satellite slugs).
+- **Front-matter (YAML)** on every topic, decision, and principle page. Topic pages carry `updated:` (YYYY-MM-DD), `status:`, `repos:` (array of satellite slugs). Decision pages carry `date:`, `status:` — no `repos:`, since a decision is repo-agnostic even when its consequences reach specific repos. Principle pages carry `adopted:`, `status:`, `sources:` — no `repos:`, since principles apply across the group.
 - **Cross-references** use `[[wikilink]]` syntax matching the target file's basename without extension.
 - **Log entry prefix** as above: `## [YYYY-MM-DD] <kind> | <title>`. Consistent prefix lets `grep "^## \[" log.md | tail` show recent activity.
 
