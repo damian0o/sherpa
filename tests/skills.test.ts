@@ -45,6 +45,7 @@ describe("skills/context-onboard-satellite/SKILL.md", () => {
     expect(body).toMatch(/derived_from/);
     expect(body).toMatch(/confirm|prompt/i);
     expect(body).toMatch(/abort|stop|refuse/i);
+    expect(body).toMatch(/strip.*unconfirmed|unconfirmed.*strip/i);
   });
 
   it("has no placeholder leftovers", () => {

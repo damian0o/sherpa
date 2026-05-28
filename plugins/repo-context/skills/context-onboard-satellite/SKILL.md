@@ -20,11 +20,12 @@ Onboard a satellite repository into a connected `repo-context` wiki. The skill s
    - If `derived_from: origin`, use the slug as-is (it has no ` (unconfirmed)` suffix). No prompt needed.
    - If `derived_from` is anything else (`package.json`, `pyproject.toml`, `Cargo.toml`, `go.mod`, or `basename`), the slug field will be suffixed with ` (unconfirmed)` (e.g. `billing-service (unconfirmed)`). Strip the ` (unconfirmed)` suffix to get the bare slug. Before proposing any seed pages, prompt the user:
 
-     > No origin remote on this satellite. Use slug `<bare-slug>` (derived from `<derived_from>`)? Reply `y` to accept, `n` to abort, or type a different slug to override.
+     > No origin remote on this satellite. Use slug `<bare-slug>` (derived from `<derived_from>`)? Enter `y` to accept, `n` to abort, or type a replacement slug.
 
-   - On `y`: use the bare slug as-is.
-   - On `n`: abort the onboarding cleanly. Do not write any wiki pages. Surface to the user that onboarding was aborted at their request and no changes were made.
-   - On any other reply: treat it as a user-typed override. Normalise it (lowercase, non-alphanumeric → `-`) and use that as the slug for the remainder of this run.
+   - Reply handling — match exactly, case-insensitively, on single-character inputs only:
+     - On `y` or `Y` (the entire reply, nothing else): use the bare slug as-is.
+     - On `n` or `N` (the entire reply, nothing else): abort the onboarding cleanly. Do not write any wiki pages. The wiki submodule remains attached (it was added by `/context-connect` before this skill was invoked). Tell the user that onboarding was aborted at their request, no changes were made, and they can re-run `/context-connect` to restart onboarding and be prompted again.
+     - On any other reply (including replies starting with `y` or `n` but longer than one character, e.g. `y-server`, `nginx-proxy`): treat it as a user-typed override slug. Normalise it (lowercase, non-alphanumeric → `-`). If normalisation produces an empty string or a string consisting only of `-` characters, reject the input and re-prompt once. Otherwise, use the normalised value as the slug for the remainder of this run.
 
    The confirmed (or overridden) slug is the value you put into `repos:` front-matter on every seed page.
 3. **Read the existing wiki state.** Open `wiki/index.md`. List the existing topic and decision pages. For each existing topic page, read its front-matter and note its `repos:` array. This is what you reconcile against to avoid duplicating earlier-satellite content.
