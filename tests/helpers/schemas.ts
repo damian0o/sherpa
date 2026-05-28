@@ -3,6 +3,9 @@ import addFormats from "ajv-formats";
 
 export const ajv = addFormats(new Ajv({ allErrors: true, strict: false }));
 
+// SemVer-with-optional-prerelease: 1.2.3 or 1.2.3-rc.1, etc.
+const SEMVER_PATTERN = "^\\d+\\.\\d+\\.\\d+(-[\\w.]+)?$";
+
 export interface MarketplaceManifest {
   $schema?: string;
   name: string;
@@ -19,12 +22,14 @@ export interface MarketplaceManifest {
 
 export const marketplaceSchema: JSONSchemaType<MarketplaceManifest> = {
   type: "object",
+  additionalProperties: false,
   properties: {
     $schema: { type: "string", nullable: true },
     name: { type: "string", minLength: 1 },
     description: { type: "string", minLength: 1 },
     owner: {
       type: "object",
+      additionalProperties: false,
       properties: {
         name: { type: "string", minLength: 1 },
         email: { type: "string", format: "email", nullable: true },
@@ -36,10 +41,11 @@ export const marketplaceSchema: JSONSchemaType<MarketplaceManifest> = {
       minItems: 1,
       items: {
         type: "object",
+        additionalProperties: false,
         properties: {
           name: { type: "string", minLength: 1 },
           description: { type: "string", minLength: 1 },
-          version: { type: "string", pattern: "^\\d+\\.\\d+\\.\\d+" },
+          version: { type: "string", pattern: SEMVER_PATTERN },
           source: { type: "string", minLength: 1 },
           category: { type: "string", nullable: true },
         },
@@ -63,13 +69,15 @@ export interface PluginManifest {
 
 export const pluginSchema: JSONSchemaType<PluginManifest> = {
   type: "object",
+  additionalProperties: false,
   properties: {
     name: { type: "string", minLength: 1 },
     description: { type: "string", minLength: 1 },
-    version: { type: "string", pattern: "^\\d+\\.\\d+\\.\\d+" },
+    version: { type: "string", pattern: SEMVER_PATTERN },
     author: {
       type: "object",
       nullable: true,
+      additionalProperties: false,
       properties: {
         name: { type: "string", minLength: 1 },
         email: { type: "string", format: "email", nullable: true },
