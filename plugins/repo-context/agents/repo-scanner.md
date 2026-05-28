@@ -34,8 +34,14 @@ Return exactly this markdown structure. The dispatching skill parses it, so stru
 # Repo Orientation Map
 
 ## Satellite identifier
-- **slug**: <kebab-case identifier — derive from `git remote get-url origin` (`<org>/<repo>` → `<repo>`) when remote is present; otherwise the working directory basename>
-- **remote URL**: <output of `git remote get-url origin`, or `(none)` if no origin remote configured>
+- **slug**: <kebab-case identifier, stable across clones of the same satellite.
+  From `git remote get-url origin`: take the **last path component** (after the final `/` or `:`),
+  strip a trailing `.git` suffix, lowercase, normalise any non-alphanumeric character to `-`.
+  Examples: `https://github.com/foo/bar.git` → `bar`; `git@gitlab.com:org/my-proj.git` → `my-proj`;
+  `https://gitlab.com/group/sub/Proj` → `proj`. If no origin remote is configured, fall back to
+  `basename $(pwd)` with the same lowercase + non-alnum→`-` normalisation. The slug must be the
+  same whether the satellite was cloned via HTTPS or SSH.>
+- **remote URL**: <verbatim output of `git remote get-url origin`, or `(none)` if no origin remote configured>
 
 ## 1-line summary
 <One sentence stating what this codebase is, grounded in README/manifests.>
@@ -74,7 +80,7 @@ Return exactly this markdown structure. The dispatching skill parses it, so stru
 1. Determine the satellite slug and remote URL: run `git remote get-url origin 2>/dev/null` and `pwd` to derive the slug.
 2. Read `README.md` if present (read once, fully).
 3. Read manifest files that exist: `package.json`, `pyproject.toml`, `go.mod`, `Cargo.toml`, `Gemfile`, `composer.json`, `pom.xml`, `build.gradle`. Note runtime / type.
-4. Read any top-level `CLAUDE.md` (without the `wiki/` submodule's CLAUDE.md — that's not this satellite's).
+4. Read any top-level `CLAUDE.md` (the satellite's own, not the `wiki/` submodule's CLAUDE.md).
 5. Read deployment / container files that exist: `Dockerfile`, `compose.yml`, `compose.yaml`, `docker-compose.yml`, `.env.example`, `fly.toml`, `railway.toml`.
 6. Run `git log --oneline -30` to skim recent activity. Note the kinds of changes happening, not specifics.
 7. List top-level directories. For each, open one or two representative files only if it helps classify the directory's role (don't deep-dive — that's other analyzers' job).
