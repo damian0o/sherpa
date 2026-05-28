@@ -34,13 +34,14 @@ Onboard a satellite repository into a connected `repo-context` wiki. The skill s
    The user can accept all, accept some, edit individual items, or reject. Proceed to step 6 only after user approval.
 
 6. **Write accepted seeds in a single commit inside the wiki submodule.**
-   - `cd wiki && git status --porcelain` — confirm clean.
-   - Determine the wiki's default branch via `git -C wiki remote show origin | awk '/HEAD branch/ {print $NF}'`.
+   - `git -C wiki status --porcelain` — confirm the wiki working tree is clean. If non-empty, STOP and surface the uncommitted state to the user; do not auto-recover.
+   - Determine the wiki's default branch: `git -C wiki remote show origin | awk '/HEAD branch/ {print $NF}'`. If empty (no origin configured), STOP and surface the state.
    - `git -C wiki checkout <default-branch>`.
    - For each accepted seed:
-     - If "+ new": render the topic or decision template with `{{date}}` (today's ISO date) and `{{title}}` substituted; write the file under `wiki/topics/` or `wiki/decisions/`. Set the `repos:` front-matter field to `[<satellite-slug>]`.
-     - If "extend": surgical edit per the *Wiki maintenance discipline* in `wiki/CLAUDE.md` — only touch what's needed. Add `<satellite-slug>` to the `repos:` array if not present. Add new sections only if proposed.
-   - Update `wiki/index.md`: add a line per new page under the appropriate section (Topics, Decisions, or Sources).
+     - If "+ new" and the seed is a **topic** page: render `templates/topic.md` with `{{date}}` (today's ISO date) and `{{title}}` substituted; set `repos:` to `[<satellite-slug>]`; write the file under `wiki/topics/`.
+     - If "+ new" and the seed is a **decision** page: render `templates/decision.md` with `{{date}}` and `{{title}}` substituted; write under `wiki/decisions/`. **Do not add a `repos:` field — decisions do not carry one** (see `wiki/CLAUDE.md`'s Conventions section).
+     - If "extend" (always a topic page): surgical edit per the *Wiki maintenance discipline* in `wiki/CLAUDE.md` — only touch what's needed. Add `<satellite-slug>` to the topic's `repos:` array if not present. Add new sections only if proposed.
+   - Update `wiki/index.md`: add a line per new page under the appropriate section (Topics or Decisions). Onboarding does not write to Principles or Sources in v0.1.
    - Append to `wiki/log.md`: `## [<date>] onboard | <satellite-slug>` followed by 2–4 bullet lines naming the seeds you wrote.
    - `git -C wiki add . && git -C wiki commit -m "Onboard <satellite-slug>: <N> seeds"`.
 7. **Return to the satellite repo.** The caller (`/context-connect`) handles the submodule pointer bump and the satellite-side commit.
