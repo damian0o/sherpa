@@ -27,7 +27,7 @@ Execute these steps in order. Each step that performs a filesystem or git mutati
 4. **Render `log.md` with today's date.** Read `templates/log.md`, replace `{{date}}` with today's ISO date (YYYY-MM-DD), and write the result to `<target>/log.md`.
 5. **Create directories.** Create the four content-category directories under `<target>`: `topics/`, `decisions/`, `principles/`, `raw/`. Run `mkdir -p <target>/topics/ <target>/decisions/ <target>/principles/ <target>/raw/`.
 6. **Drop `.gitkeep` sentinel files.** Write empty files at `<target>/topics/.gitkeep`, `<target>/decisions/.gitkeep`, `<target>/principles/.gitkeep`, and `<target>/raw/.gitkeep`. Use the Bash tool: `touch <target>/topics/.gitkeep <target>/decisions/.gitkeep <target>/principles/.gitkeep <target>/raw/.gitkeep`. These sentinel files ensure the four content directories survive `git clone` (git does not track empty directories).
-7. **Sync `.repo-context-meta.json` via `meta-syncer`.** Use the Task tool with `subagent_type: "meta-syncer"`. Pass `<target>` as the wiki root. The sub-agent writes the initial marker file (empty `topics/decisions/principles` arrays, today's ISO date).
+7. **Sync `.repo-context-meta.json` via `meta-syncer`.** Use the Task tool with `subagent_type: "meta-syncer"`. Pass `<target>` as the wiki root. The sub-agent writes the initial marker file (empty `topics/decisions/principles` arrays, today's ISO date). Verify the sub-agent returns a line matching `meta-syncer: synced <target>/.repo-context-meta.json` before proceeding.
 8. **Initial commit.** Run `git -C <target> add . && git -C <target> commit -m "Initialise repo-context store"`.
 9. **Prompt the user to push.** Tell the user:
    - The store has been initialised.
