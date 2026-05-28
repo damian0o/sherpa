@@ -1,0 +1,17 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "repo-context-marketplace",
+  "description": "Cross-repo coordination wiki for Claude Code agents",
+  "owner": {
+    "name": "Damian Ospara"
+  },
+  "plugins": [
+    {
+      "name": "repo-context",
+      "description": "Shared coordination wiki across multiple satellite repos",
+      "version": "0.1.0",
+      "source": "./plugins/repo-context",
+      "category": "knowledge-management"
+    }
+  ]
+}

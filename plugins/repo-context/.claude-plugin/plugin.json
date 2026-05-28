@@ -1,0 +1,13 @@
+{
+  "name": "repo-context",
+  "description": "Shared coordination wiki across multiple satellite repos (frontend, backend, infra). Maintained by Claude Code agents, integrated via git submodule.",
+  "version": "0.1.0",
+  "license": "MIT",
+  "keywords": [
+    "wiki",
+    "coordination",
+    "multi-repo",
+    "submodule",
+    "knowledge-management"
+  ]
+}
