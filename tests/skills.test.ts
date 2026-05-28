@@ -40,6 +40,13 @@ describe("skills/context-onboard-satellite/SKILL.md", () => {
     expect(body).toMatch(/v0\.1/);
   });
 
+  it("body reads derived_from and prompts to confirm slug when not from origin", () => {
+    const { body } = loadMarkdown(path);
+    expect(body).toMatch(/derived_from/);
+    expect(body).toMatch(/confirm|prompt/i);
+    expect(body).toMatch(/abort|stop|refuse/i);
+  });
+
   it("has no placeholder leftovers", () => {
     const { raw } = loadMarkdown(path);
     expect(noPlaceholders(raw)).toEqual([]);

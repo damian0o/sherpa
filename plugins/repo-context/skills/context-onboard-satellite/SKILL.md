@@ -16,7 +16,17 @@ Onboard a satellite repository into a connected `repo-context` wiki. The skill s
 ## Procedure
 
 1. **Dispatch `repo-scanner`.** Use the Task tool with `subagent_type: "repo-scanner"`. Pass the current working directory as context. Wait for the Repo Orientation Map output.
-2. **Extract the satellite slug.** From `repo-scanner`'s "Satellite identifier" section, read `slug`. This is the value you will put into `repos:` front-matter on every seed page.
+2. **Extract and confirm the satellite slug.** From `repo-scanner`'s "Satellite identifier" section, read `slug` and `derived_from`.
+   - If `derived_from: origin`, use the slug as-is (it has no ` (unconfirmed)` suffix). No prompt needed.
+   - If `derived_from` is anything else (`package.json`, `pyproject.toml`, `Cargo.toml`, `go.mod`, or `basename`), the slug field will be suffixed with ` (unconfirmed)` (e.g. `billing-service (unconfirmed)`). Strip the ` (unconfirmed)` suffix to get the bare slug. Before proposing any seed pages, prompt the user:
+
+     > No origin remote on this satellite. Use slug `<bare-slug>` (derived from `<derived_from>`)? Reply `y` to accept, `n` to abort, or type a different slug to override.
+
+   - On `y`: use the bare slug as-is.
+   - On `n`: abort the onboarding cleanly. Do not write any wiki pages. Surface to the user that onboarding was aborted at their request and no changes were made.
+   - On any other reply: treat it as a user-typed override. Normalise it (lowercase, non-alphanumeric → `-`) and use that as the slug for the remainder of this run.
+
+   The confirmed (or overridden) slug is the value you put into `repos:` front-matter on every seed page.
 3. **Read the existing wiki state.** Open `wiki/index.md`. List the existing topic and decision pages. For each existing topic page, read its front-matter and note its `repos:` array. This is what you reconcile against to avoid duplicating earlier-satellite content.
 4. **Draft seed proposals.** Based on the Repo Orientation Map's "5-minute explanation" and "Cross-cutting surface", draft a small set of seed pages (typically 1–5 in v0.1; more analyzers arrive in v0.4). For each draft, decide:
    - **+ new topic** `wiki/topics/<slug>.md` — when the concern isn't already covered. `repos: [<satellite-slug>]`.
