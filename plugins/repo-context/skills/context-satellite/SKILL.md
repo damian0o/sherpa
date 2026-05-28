@@ -45,18 +45,19 @@ Edits inside the wiki submodule must happen on a real branch, never in the detac
 
 ```bash
 # 1. Confirm submodule presence and validity.
-test -d wiki/.git -o -f wiki/.git || { echo "wiki/ is not a git submodule" >&2; exit 1; }
+{ test -d wiki/.git || test -f wiki/.git; } || { echo "wiki/ is not a git submodule" >&2; exit 1; }
 test -f wiki/.repo-context-meta.json || { echo "wiki/ is not a repo-context store" >&2; exit 1; }
 
-# 2. Detect the wiki's default branch (do NOT hard-code 'main').
+# 2. Confirm origin remote and detect the wiki's default branch (do NOT hard-code 'main').
+git -C wiki remote get-url origin >/dev/null 2>&1 || { echo "wiki/ has no origin remote" >&2; exit 1; }
 default_branch=$(git -C wiki remote show origin 2>/dev/null | awk '/HEAD branch/ {print $NF}')
-test -n "$default_branch" || { echo "Cannot determine wiki default branch" >&2; exit 1; }
+test -n "$default_branch" || { echo "Cannot determine wiki default branch (origin/HEAD not set?)" >&2; exit 1; }
 
 # 3. Confirm the submodule working tree is clean.
 test -z "$(git -C wiki status --porcelain)" || { echo "wiki/ has uncommitted changes — refusing to proceed" >&2; exit 1; }
 ```
 
-If any pre-check fails, **escalate to the user with the actual failure message and STOP**. Do not attempt to auto-recover from arbitrary submodule state.
+If any pre-check fails, **escalate to the user with the actual failure message and STOP**. Do not attempt to auto-recover from arbitrary submodule state. Specifically for the dirty-tree case (#3): present the offending paths to the user (`git -C wiki status` output) and ask whether to discard, stash, or commit those changes before continuing — do not pick for them.
 
 ### Edit (only if pre-check passed)
 
@@ -86,7 +87,12 @@ Before any of the above runs, resolve to the real repo root:
 real_root=$(git -C "$(pwd)" rev-parse --show-superproject-working-tree 2>/dev/null || git -C "$(pwd)" rev-parse --show-toplevel)
 ```
 
-This handles two cases: (a) you're inside a git worktree pointing at a satellite's main repo; (b) you're inside the satellite directly. In both, `real_root` is the satellite's true root, where `wiki/` would live.
+This handles two cases:
+
+- (a) **You're inside the `wiki/` submodule.** `--show-superproject-working-tree` returns the satellite root (the submodule's parent).
+- (b) **You're anywhere in the satellite** — root, a subdirectory, or a `git worktree` of it. `--show-superproject-working-tree` returns empty, so the fallback `--show-toplevel` returns the satellite root.
+
+In both cases, `real_root` is the satellite's true root, where `wiki/` lives.
 
 ## Red flags
 
@@ -99,4 +105,9 @@ This handles two cases: (a) you're inside a git worktree pointing at a satellite
 
 ## Behavioral baseline
 
-Four operational principles from the contributor `CLAUDE.md`. Especially: every proposed change cites its source (file:line); push back on ambiguity rather than guess.
+Inherits the four operational principles from the contributor `CLAUDE.md` at the plugin repo root:
+
+1. **Think before acting.** State assumptions, surface tradeoffs.
+2. **Simplicity first.** Minimum mutation. Don't restructure adjacent content.
+3. **Surgical changes.** Every changed line traces to the user's request.
+4. **Goal-driven, verifiable.** Every proposed change cites its source (`file:line` or wiki page slug). Push back on ambiguity rather than guess.
