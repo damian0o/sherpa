@@ -26,9 +26,16 @@ Do not activate for commands (`/context-init`, `/context-connect`, etc.) — tho
    - **"What's the current state of X?" / "How does X work?"** → start in *Topics* (`topics/`).
    - **"Why did we choose X?" / "When did we decide X?"** → start in *Decisions* (`decisions/`).
    - **"What does the article / conversation about X say?"** → start in *Sources* (`raw/`).
+
+   If the question spans categories (e.g. "Why did we decide X and how is it implemented now?"), split it: route each clause to its category and cite from both.
 3. **Drill into pages.** For each candidate, read it. Follow `[[wikilink]]` references when clearly relevant; do not read every linked page transitively.
 4. **Synthesise the answer.** Compose a response in prose. Every claim from a wiki page cites it via `[[page-slug]]`. If the wiki doesn't cover the question, say so explicitly: "The wiki doesn't have a page on this; closest related pages are [[x]] and [[y]]."
-5. **Offer to file the answer back.** After answering, if the answer represents reusable knowledge, ask: *"This might be worth filing as a new topic / decision / principle page. Want me to draft one?"* Pick the category that matches the *kind* of knowledge — durable belief → principle; current operational state → topic; point-in-time choice → decision. Propose the draft after the user agrees, following *Wiki maintenance discipline* in the wiki's `CLAUDE.md`.
+5. **Offer to file the answer back — only when it earns a page.** After answering, judge whether the answer adds knowledge the wiki does not already capture. *Offer* to file when the answer is one of:
+   - a stated **belief or principle** the wiki doesn't yet record;
+   - a **point-in-time choice** (decision) the wiki doesn't yet record;
+   - a **synthesis** that connects two or more pages in a way no single existing page does.
+
+   Do **not** offer for routine one-off questions, restatements of what an existing page already says, or implementation lookups. When you do offer, phrase as: *"This might be worth filing as a new `<category>` page. Want me to draft one?"* — pick the category by the rubric: durable belief → principle; current operational state → topic; point-in-time choice → decision. Draft only after the user agrees, following the *Wiki maintenance discipline* in the wiki's `CLAUDE.md`.
 
 ## Citation discipline
 
