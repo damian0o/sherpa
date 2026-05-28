@@ -3,8 +3,7 @@
   "name": "repo-context-marketplace",
   "description": "Cross-repo coordination wiki for Claude Code agents",
   "owner": {
-    "name": "Damian Ospara",
-    "email": "yietti@gmail.com"
+    "name": "Damian Ospara"
   },
   "plugins": [
     {
