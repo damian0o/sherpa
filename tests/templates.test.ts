@@ -45,3 +45,80 @@ describe("templates/CLAUDE.md (wiki schema)", () => {
     expect(noPlaceholders(raw)).toEqual([]);
   });
 });
+
+describe("templates/index.md", () => {
+  const path = resolve(templatesDir, "index.md");
+  it("exists", () => expect(existsSync(path)).toBe(true));
+  it("has Topics, Decisions, Principles, Sources headings", () => {
+    const { body } = loadMarkdown(path);
+    expect(hasSections(body, ["Topics", "Decisions", "Principles", "Sources"])).toEqual([]);
+  });
+});
+
+describe("templates/log.md", () => {
+  const path = resolve(templatesDir, "log.md");
+  it("exists", () => expect(existsSync(path)).toBe(true));
+  it("seeds with an init entry placeholder", () => {
+    const { raw } = loadMarkdown(path);
+    expect(raw).toMatch(/^# Log/m);
+    expect(raw).toMatch(/^## \[\{\{date\}\}\] init \|/m);
+  });
+});
+
+describe("templates/topic.md", () => {
+  const path = resolve(templatesDir, "topic.md");
+  it("exists", () => expect(existsSync(path)).toBe(true));
+  it("has YAML front-matter with required fields", () => {
+    const { frontMatter } = loadMarkdown(path);
+    expect(frontMatter).toHaveProperty("updated");
+    expect(frontMatter).toHaveProperty("status");
+    expect(frontMatter).toHaveProperty("repos");
+  });
+  it("has the standard topic sections", () => {
+    const { body } = loadMarkdown(path);
+    expect(hasSections(body, ["Summary", "Current state", "Decisions referenced", "Open questions", "Sources"])).toEqual([]);
+  });
+});
+
+describe("templates/decision.md", () => {
+  const path = resolve(templatesDir, "decision.md");
+  it("exists", () => expect(existsSync(path)).toBe(true));
+  it("has YAML front-matter with required fields", () => {
+    const { frontMatter } = loadMarkdown(path);
+    expect(frontMatter).toHaveProperty("date");
+    expect(frontMatter).toHaveProperty("status");
+  });
+  it("has Context / Decision / Consequences sections", () => {
+    const { body } = loadMarkdown(path);
+    expect(hasSections(body, ["Context", "Decision", "Consequences"])).toEqual([]);
+  });
+});
+
+describe("templates/principle.md", () => {
+  const path = resolve(templatesDir, "principle.md");
+  it("exists", () => expect(existsSync(path)).toBe(true));
+  it("has YAML front-matter with adopted, status, sources", () => {
+    const { frontMatter } = loadMarkdown(path);
+    expect(frontMatter).toHaveProperty("adopted");
+    expect(frontMatter).toHaveProperty("status");
+    expect(frontMatter).toHaveProperty("sources");
+  });
+  it("has 'What this means in practice' and 'What this does not mean' sections", () => {
+    const { body } = loadMarkdown(path);
+    expect(hasSections(body, ["What this means in practice", "What this does not mean", "Sources"])).toEqual([]);
+  });
+  it("does not have a repos: field (principles are not satellite-scoped)", () => {
+    const { frontMatter } = loadMarkdown(path);
+    expect(frontMatter).not.toHaveProperty("repos");
+  });
+});
+
+describe("templates/satellite-CLAUDE.md", () => {
+  const path = resolve(templatesDir, "satellite-CLAUDE.md");
+  it("exists", () => expect(existsSync(path)).toBe(true));
+  it("is wrapped in BEGIN/END markers for idempotent stitching", () => {
+    const { raw } = loadMarkdown(path);
+    expect(raw).toMatch(/<!-- BEGIN repo-context -->/);
+    expect(raw).toMatch(/<!-- END repo-context -->/);
+  });
+});
