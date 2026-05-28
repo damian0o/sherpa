@@ -114,7 +114,7 @@ Edit the `Satellite identifier` block of `agents/repo-scanner.md` so the slug de
    - Apply the same lowercase + non-alphanumeric → `-` normalization.
 3. **Directory basename** *(unchanged as last resort)*. `basename $(pwd)`, same normalization.
 
-When the slug comes from step 2 or 3, the orientation map's `Satellite identifier` section must add a `derived_from:` field and mark the slug `(unconfirmed)`:
+The orientation map's `Satellite identifier` section always includes a `derived_from:` field (set to `origin`, a manifest filename, or `basename`). When the slug comes from step 2 or 3, the slug value is suffixed with ` (unconfirmed)`:
 
 ```markdown
 ## Satellite identifier

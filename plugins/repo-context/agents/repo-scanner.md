@@ -35,10 +35,15 @@ Return exactly this markdown structure. The dispatching skill parses it, so stru
 
 ## Satellite identifier
 - **slug**: <kebab-case identifier derived via the three-step fallback chain below. Apply the same
-  lowercase + non-alphanumeric → `-` normalisation at every step.>
+  lowercase + non-alphanumeric → `-` normalisation at every step. When `derived_from` is anything
+  other than `origin`, the literal string ` (unconfirmed)` MUST be appended to the slug value here
+  (so the field reads e.g. `billing-service (unconfirmed)`, not just `billing-service`). Consumers
+  that need the bare slug (e.g. to write into `repos:` front-matter) MUST strip the
+  ` (unconfirmed)` suffix before using the value.>
 - **derived_from**: <one of `origin`, `package.json`, `pyproject.toml`, `Cargo.toml`, `go.mod`,
-  `basename` — the source that produced the slug. Required field. When the value is anything other
-  than `origin`, append the literal string ` (unconfirmed)` to the slug above.>
+  `basename` — the source that produced the slug. Always emit this field. When `origin` is the
+  source, write `derived_from: origin`. When anything else, write the matching value and append
+  ` (unconfirmed)` to the slug field per the rule above.>
 - **remote URL**: <verbatim output of `git remote get-url origin`, or `(none)` if no origin remote configured>
 
 ### Slug fallback chain
@@ -49,8 +54,8 @@ Use the first step that yields a value. Apply lowercase + non-alphanumeric → `
    `git@gitlab.com:org/my-proj.git` → `my-proj`. If origin is configured, this is the answer and
    `derived_from: origin`.
 2. **Manifest name** (only if origin is absent). Check files in this order and use the first match:
-   - `package.json`: read the `name` field. For scoped npm names like `@org/foo`, strip the scope
-     prefix → `foo`. Result: `derived_from: package.json`.
+   - `package.json`: read the `name` field. For scoped npm names like `@org/foo`, strip everything
+     up to and including the first `/` → `foo`. Result: `derived_from: package.json`.
    - `pyproject.toml`: read `[project].name`, falling back to `[tool.poetry].name` if the former
      is absent. Result: `derived_from: pyproject.toml`.
    - `Cargo.toml`: read `[package].name`. Result: `derived_from: Cargo.toml`.
@@ -95,7 +100,7 @@ when origin is set; steps 2 and 3 are origin-independent by construction).
 
 ## Workflow process
 
-1. Determine the satellite slug and remote URL by walking the three-step fallback chain in the Output format section: try `git remote get-url origin 2>/dev/null` first; if empty, check manifests in the documented order (`package.json`, `pyproject.toml`, `Cargo.toml`, `go.mod`); if none match, use `basename $(pwd)`. Set `derived_from` to the step that succeeded and mark the slug `(unconfirmed)` in your output if `derived_from` is anything other than `origin`.
+1. Determine the satellite slug and remote URL by walking the three-step fallback chain in the Output format section. Try `git remote get-url origin 2>/dev/null` first; if empty, check manifests in the order documented under "### Slug fallback chain"; if none match, use `basename $(pwd)`. Always emit `derived_from` (set it to the step that succeeded). Append ` (unconfirmed)` to the slug value when `derived_from` is anything other than `origin`.
 2. Read `README.md` if present (read once, fully).
 3. Read manifest files that exist: `package.json`, `pyproject.toml`, `go.mod`, `Cargo.toml`, `Gemfile`, `composer.json`, `pom.xml`, `build.gradle`. Note runtime / type.
 4. Read any top-level `CLAUDE.md` (the satellite's own, not the `wiki/` submodule's CLAUDE.md).
