@@ -86,3 +86,51 @@ describe("skills/context-query/SKILL.md", () => {
     expect(noPlaceholders(raw)).toEqual([]);
   });
 });
+
+describe("skills/context-satellite/SKILL.md", () => {
+  const path = resolve(skillsDir, "context-satellite/SKILL.md");
+
+  it("exists", () => {
+    expect(existsSync(path)).toBe(true);
+  });
+
+  it("front-matter description starts with 'Use when'", () => {
+    const { frontMatter } = loadMarkdown(path);
+    expect(frontMatter.name).toBe("context-satellite");
+    expect((frontMatter.description as string).startsWith("Use when")).toBe(true);
+  });
+
+  it("body has Reading, Writing-back, Submodule discipline sections", () => {
+    const { body } = loadMarkdown(path);
+    expect(hasSections(body, ["Reading", "Writing-back", "Submodule discipline"])).toEqual([]);
+  });
+
+  it("body has a Red Flags table", () => {
+    const { body } = loadMarkdown(path);
+    expect(body).toMatch(/Red [Ff]lags/);
+    expect(body).toMatch(/\| Thought/);
+    expect(body).toMatch(/\| Reality/);
+  });
+
+  it("body specifies detecting the wiki submodule default branch (no hard-coded 'main')", () => {
+    const { body } = loadMarkdown(path);
+    expect(body).toMatch(/default branch|HEAD branch/);
+    expect(body).not.toMatch(/git checkout main(?!.*detect)/);
+  });
+
+  it("body specifies the pre-check + escalation pattern", () => {
+    const { body } = loadMarkdown(path);
+    expect(body).toMatch(/pre-check|precondition/i);
+    expect(body).toMatch(/escalat|surface|stop|refuse/i);
+  });
+
+  it("body specifies worktree-awareness", () => {
+    const { body } = loadMarkdown(path);
+    expect(body).toMatch(/worktree/i);
+  });
+
+  it("has no placeholder leftovers", () => {
+    const { raw } = loadMarkdown(path);
+    expect(noPlaceholders(raw)).toEqual([]);
+  });
+});
