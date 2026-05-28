@@ -137,7 +137,7 @@ In `tests/agents.test.ts`, mirror the existing `repo-scanner` test block:
 
 - File exists at `plugins/repo-context/agents/meta-syncer.md`.
 - Front-matter has `name: meta-syncer` and a non-empty `description`.
-- Body has the six required sections: `Identity`, `Mission`, `Critical rules`, `Output format`, `Workflow process`. (Same checklist `repo-scanner` uses.)
+- Body has the five required sections: `Identity`, `Mission`, `Critical rules`, `Output format`, `Workflow process`. (Same checklist `repo-scanner` uses.)
 - `Critical rules` section asserts: `Read-only`, `Single writable file`, `Deterministic ordering`, `Idempotent`, `No git mutation`.
 - `Output format` section specifies the JSON shape with `{slug, path}` entries.
 - No placeholder leftovers (`TBD`, `TODO:`, etc.).
