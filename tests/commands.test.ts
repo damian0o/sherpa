@@ -54,3 +54,43 @@ describe("commands/context-init.md", () => {
     expect(noPlaceholders(raw)).toEqual([]);
   });
 });
+
+describe("commands/context-connect.md", () => {
+  const path = resolve(commandsDir, "context-connect.md");
+
+  it("exists", () => {
+    expect(existsSync(path)).toBe(true);
+  });
+
+  it("front-matter has name and description", () => {
+    const { frontMatter } = loadMarkdown(path);
+    expect(frontMatter.name).toBe("context-connect");
+    expect(typeof frontMatter.description).toBe("string");
+  });
+
+  it("body has Steps, Preconditions, Idempotency sections", () => {
+    const { body } = loadMarkdown(path);
+    expect(hasSections(body, ["Steps", "Preconditions", "Idempotency"])).toEqual([]);
+  });
+
+  it("body specifies git submodule add", () => {
+    const { body } = loadMarkdown(path);
+    expect(body).toContain("git submodule add");
+  });
+
+  it("body invokes the context-onboard-satellite skill", () => {
+    const { body } = loadMarkdown(path);
+    expect(body).toMatch(/context-onboard-satellite/);
+  });
+
+  it("body specifies stitching satellite-CLAUDE.md between markers", () => {
+    const { body } = loadMarkdown(path);
+    expect(body).toContain("<!-- BEGIN repo-context -->");
+    expect(body).toContain("<!-- END repo-context -->");
+  });
+
+  it("has no placeholder leftovers", () => {
+    const { raw } = loadMarkdown(path);
+    expect(noPlaceholders(raw)).toEqual([]);
+  });
+});
