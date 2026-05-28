@@ -52,6 +52,26 @@ describe("agents/repo-scanner.md", () => {
     }
   });
 
+  it("documents the three-step slug fallback chain (origin -> manifest -> basename)", () => {
+    const { body } = loadMarkdown(path);
+    expect(body).toMatch(/origin/i);
+    for (const m of ["package.json", "pyproject.toml", "Cargo.toml", "go.mod"]) {
+      expect(body).toContain(m);
+    }
+    expect(body).toMatch(/basename/);
+  });
+
+  it("Output format requires derived_from field when slug is not from origin", () => {
+    const { body } = loadMarkdown(path);
+    expect(body).toMatch(/derived_from/);
+    expect(body).toMatch(/unconfirmed/);
+  });
+
+  it("npm scope handling: @org/foo -> foo is documented", () => {
+    const { body } = loadMarkdown(path);
+    expect(body).toMatch(/@org\/foo|npm scope|strip scope|scoped package/i);
+  });
+
   it("has no placeholder leftovers", () => {
     const { raw } = loadMarkdown(path);
     expect(noPlaceholders(raw)).toEqual([]);
