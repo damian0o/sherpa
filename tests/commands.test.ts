@@ -44,9 +44,16 @@ describe("commands/context-init.md", () => {
     expect(body).toContain(".repo-context-meta.json");
   });
 
-  it("body's meta file template includes a principles array", () => {
+  it("body writes .gitkeep to each of the four content-category directories", () => {
     const { body } = loadMarkdown(path);
-    expect(body).toMatch(/"principles":\s*\[\]/);
+    for (const d of ["topics", "decisions", "principles", "raw"]) {
+      expect(body).toContain(`${d}/.gitkeep`);
+    }
+  });
+
+  it("body invokes the meta-syncer sub-agent for the marker file", () => {
+    const { body } = loadMarkdown(path);
+    expect(body).toMatch(/meta-syncer/);
   });
 
   it("has no placeholder leftovers", () => {

@@ -26,21 +26,10 @@ Execute these steps in order. Each step that performs a filesystem or git mutati
    - `templates/index.md` → `<target>/index.md`
 4. **Render `log.md` with today's date.** Read `templates/log.md`, replace `{{date}}` with today's ISO date (YYYY-MM-DD), and write the result to `<target>/log.md`.
 5. **Create directories.** Create the four content-category directories under `<target>`: `topics/`, `decisions/`, `principles/`, `raw/`. Run `mkdir -p <target>/topics/ <target>/decisions/ <target>/principles/ <target>/raw/`.
-6. **Write the marker file.** Create `<target>/.repo-context-meta.json` with this exact content (substitute the date to today's ISO date):
-
-   ```json
-   {
-     "kind": "repo-context-store",
-     "schema_version": 1,
-     "topics": [],
-     "decisions": [],
-     "principles": [],
-     "updated": "<date>"
-   }
-   ```
-
-7. **Initial commit.** Run `git -C <target> add . && git -C <target> commit -m "Initialise repo-context store"`.
-8. **Prompt the user to push.** Tell the user:
+6. **Drop `.gitkeep` sentinel files.** Write empty files at `<target>/topics/.gitkeep`, `<target>/decisions/.gitkeep`, `<target>/principles/.gitkeep`, and `<target>/raw/.gitkeep`. Use the Bash tool: `touch <target>/topics/.gitkeep <target>/decisions/.gitkeep <target>/principles/.gitkeep <target>/raw/.gitkeep`. These sentinel files ensure the four content directories survive `git clone` (git does not track empty directories).
+7. **Sync `.repo-context-meta.json` via `meta-syncer`.** Use the Task tool with `subagent_type: "meta-syncer"`. Pass `<target>` as the wiki root. The sub-agent writes the initial marker file (empty `topics/decisions/principles` arrays, today's ISO date).
+8. **Initial commit.** Run `git -C <target> add . && git -C <target> commit -m "Initialise repo-context store"`.
+9. **Prompt the user to push.** Tell the user:
    - The store has been initialised.
    - To use it from satellite repos, push it to a remote and copy the remote URL.
    - The next step from any satellite repo is `/context-connect <remote-url>`.
