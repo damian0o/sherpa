@@ -153,7 +153,7 @@ sources: []
 - [ ] **Step 5: Run tests to verify they pass**
 
 Run: `npm test -- templates`
-Expected: all template tests PASS (35 total: 29 existing + 6 new for raw.md + 1 new for topic.md sources, minus 0 removed = 36 total in this file).
+Expected: all template tests PASS (36 total: 29 existing + 6 new for raw.md + 1 new for topic.md sources).
 
 - [ ] **Step 6: Commit**
 
@@ -275,7 +275,7 @@ The dispatching skill turns your output into wiki page proposals presented to th
 
 ## Output format
 
-Return exactly this YAML structure (replace placeholder values with actual extraction):
+Return exactly this YAML structure (replace each `<...>` field with the actual value):
 
 ```yaml
 slug: <slug-from-caller>
@@ -306,7 +306,7 @@ If the source yields no extractable claims (paywalled, fetch failed, no substant
 ## Workflow process
 
 1. Receive the URL and slug from the caller.
-2. **Fetch the source.** Use the WebFetch tool with the URL and a prompt asking for the full article text, headers preserved.
+2. **Fetch the source.** Use the WebFetch tool with the URL and a prompt asking for the full article text, headers preserved. If WebFetch returns a cross-host redirect instead of content, re-issue it once with the redirect URL the tool reports.
 3. **Read the fetched content fully.** Identify the source's thesis, its major claims, and the verbatim sentences that support each claim.
 4. **Classify each claim.** A claim about *how we should work* or *what we believe is true durably* is principle-shaped (`candidate: new-principle` if no existing page fits; `extend-principle` if it strengthens an existing principle slug). A claim about *current state, conventions, or operational concerns* is topic-shaped (`new-topic` or `extend-topic`). When uncertain between principle and topic, prefer topic — principles are rarer.
 5. **Pick proposed slugs.** For `new-*` candidates, the slug should be short, kebab-case, and evocative of the claim (e.g. `engineer-the-harness`, `spec-driven-verification`).
@@ -430,7 +430,7 @@ Execute these steps in order. Each step that mutates the filesystem or git state
 
 1. **Verify preconditions.** Use the Bash tool to confirm `.repo-context-meta.json` exists at the working directory and contains `"kind": "repo-context-store"`. If not, STOP and surface the situation.
 
-2. **Derive the slug from the URL.** Take the last meaningful path component of the URL (after the last `/`, before any `?` or `#`). Strip a trailing slash. If the result is empty (e.g. for `https://example.com/`), fall back to the hostname. Normalize: lowercase, replace non-alphanumeric characters with `-`, collapse runs of `-`, strip leading/trailing `-`. Show the derived slug to the user and offer them the chance to override before continuing.
+2. **Derive the slug from the URL.** Take the last meaningful path component of the URL (after the last `/`, before any `?` or `#`). Strip a trailing slash, then strip a recognized trailing document extension if present (`.md`, `.html`, `.htm`, `.php`, `.aspx`, `.jsp`, `.txt`). If the result is empty (e.g. for `https://example.com/`), fall back to the hostname. Normalize: lowercase, replace non-alphanumeric characters with `-`, collapse runs of `-`, strip leading/trailing `-`. Show the derived slug to the user and offer them the chance to override before continuing.
 
 3. **Refuse if a raw page already exists for this slug.** If `raw/<slug>.md` exists, STOP. Surface the existing file's `source_url` (read its front-matter) so the user can confirm whether they meant to re-ingest. Re-ingest semantics are intentionally not implemented in v0.2.0.
 
@@ -650,7 +650,7 @@ Still inside `~/playground/sherpa-wiki/`, in Claude Code:
 ```
 
 This is the foundational source — the idea file the whole project is built on (byte-for-byte identical to the repo's `docs/llm-wiki-idea.md`, Karpathy's origin doc). Expected behavior:
-- Slug derives to `llm-wiki-md` or similar from the raw URL; override to `llm-wiki`.
+- Slug derives to `llm-wiki` directly (the `.md` extension is stripped); confirm it.
 - `article-analyzer` fetches the gist (plain markdown — WebFetch handles it cleanly) and returns several claims.
 - This source is **meta**: it describes the wiki *method* (raw/wiki/schema layers; ingest → query → lint), not the engineering domain. Expect principle candidates like `compounding-knowledge-artifact` and a topic like `wiki-architecture` — not domain claims.
 - This is pleasingly **recursive**: the coordination wiki ends up holding the very idea that birthed it, so this ingest is itself the clearest demonstration of the pattern the source describes.

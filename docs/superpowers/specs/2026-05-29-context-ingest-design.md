@@ -58,7 +58,7 @@ Grow the front-matter to include a `sources:` array (already present on `princip
 `/context-ingest <url>` executes in this order. Every filesystem mutation uses the Bash tool or Write tool.
 
 1. **Preconditions.** Working directory contains `.repo-context-meta.json` whose `kind` is `repo-context-store`. If not, STOP and surface the situation.
-2. **Slug derivation.** From the URL: take the last meaningful path component, normalize lowercase + non-alphanumeric → `-`. If the URL has no path (`https://example.com/`), fall back to the hostname. Show the derived slug to the user; allow override before proceeding.
+2. **Slug derivation.** From the URL: take the last meaningful path component, strip a recognized trailing document extension if present (`.md`, `.html`, `.htm`, `.php`, `.aspx`, `.jsp`, `.txt`), then normalize lowercase + non-alphanumeric → `-`. If the URL has no path (`https://example.com/`), fall back to the hostname. Show the derived slug to the user; allow override before proceeding.
 3. **Refuse if duplicate.** If `raw/<slug>.md` already exists, STOP. Surface the existing file's `source_url` so the user can confirm intent. (Re-ingest semantics are deferred.)
 4. **Dispatch `article-analyzer`.** Use the Task tool with `subagent_type: "article-analyzer"`. Pass the URL and derived slug as the prompt body. Wait for the YAML document. If the agent returns an error or empty extraction, STOP and surface.
 5. **Read existing wiki state.** Open `index.md`. For every claim with `candidate: extend-topic` or `extend-principle`, read the target page to know what already exists.
@@ -152,6 +152,7 @@ sources: []
 |---|---|
 | Duplicate URL (re-ingest) | Refuse if `raw/<slug>.md` exists. |
 | WebFetch failure | Surface error; suggest manual download → raw-text input (v0.2.0.1). No automatic retry. |
+| WebFetch returns a cross-host redirect | Re-issue WebFetch once with the redirect URL the tool reports. If it still does not resolve to content, treat as a WebFetch failure. |
 | Paywalled or JS-rendered URL | Same as WebFetch failure. Out of scope to fix. |
 | Short sources (<500 words) | No special path; analyzer returns fewer claims. |
 | Contradictions | Inline `> ⚠️ contradicts [[other-page]]: ...` immediately before the new claim. No auto-resolution. |
@@ -200,7 +201,7 @@ Steps:
 2. `/context-init` → empty wiki with `.gitkeep` × 4, meta-json synced.
 3. Push to `damian0o/sherpa-wiki` (private; flip to public after acceptance).
 4. Stay inside the wiki directory.
-5. `/context-ingest https://gist.githubusercontent.com/karpathy/442a6bf555914893e9891c11519de94f/raw/ac46de1ad27f92b28ac95459c782c07f6b8c964a/llm-wiki.md` → override the derived slug to `llm-wiki` → this is the *origin doc* and is meta (about the wiki method, not the engineering domain), so expect principle candidates like `compounding-knowledge-artifact` and a `wiki-architecture` topic (raw/wiki/schema layers; ingest → query → lint), not domain claims. (Pleasingly recursive: the coordination wiki ends up holding the very idea that birthed it — this ingest is itself the clearest demonstration of the pattern the source describes.) → accept the substantive ones → verify the commit lands.
+5. `/context-ingest https://gist.githubusercontent.com/karpathy/442a6bf555914893e9891c11519de94f/raw/ac46de1ad27f92b28ac95459c782c07f6b8c964a/llm-wiki.md` → confirm the derived slug `llm-wiki` (the `.md` extension is stripped) → this is the *origin doc* and is meta (about the wiki method, not the engineering domain), so expect principle candidates like `compounding-knowledge-artifact` and a `wiki-architecture` topic (raw/wiki/schema layers; ingest → query → lint), not domain claims. (Pleasingly recursive: the coordination wiki ends up holding the very idea that birthed it — this ingest is itself the clearest demonstration of the pattern the source describes.) → accept the substantive ones → verify the commit lands.
 6. `/context-ingest https://mitchellh.com/writing/my-ai-adoption-journey` → review the proposals (expect 1 new principle `engineer-the-harness`, possibly 1–2 extending topics like `agent-tooling`) → accept all → verify commit lands.
 7. `/context-ingest https://medium.com/@iambonitheuri/the-art-of-writing-meaningful-git-commit-messages-a56887a4cb49` → expect a `topics/commit-conventions.md` (status: stable) and possibly a `principles/clear-history.md` or similar.
 8. `/context-ingest https://www.aviator.co/blog/what-if-code-review-happened-before-the-code-was-written/` → expect a new principle (e.g. `spec-driven-verification`) and a topic on the two-agent workflow.
