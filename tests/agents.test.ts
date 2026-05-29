@@ -133,3 +133,58 @@ describe("agents/meta-syncer.md", () => {
     expect(noPlaceholders(raw)).toEqual([]);
   });
 });
+
+describe("agents/article-analyzer.md", () => {
+  const path = resolve(agentsDir, "article-analyzer.md");
+
+  it("exists", () => {
+    expect(existsSync(path)).toBe(true);
+  });
+
+  it("front-matter has name and description", () => {
+    const { frontMatter } = loadMarkdown(path);
+    expect(frontMatter.name).toBe("article-analyzer");
+    expect(typeof frontMatter.description).toBe("string");
+    expect((frontMatter.description as string).length).toBeGreaterThan(20);
+  });
+
+  it("has the five required agent sections", () => {
+    const { body } = loadMarkdown(path);
+    expect(hasSections(body, [
+      "Identity",
+      "Mission",
+      "Critical rules",
+      "Output format",
+      "Workflow process",
+    ])).toEqual([]);
+  });
+
+  it("Critical rules enforce read-only on source, single YAML output, no git mutation, verbatim quotes, scope control", () => {
+    const { body } = loadMarkdown(path);
+    expect(body).toMatch(/Read-only on source/);
+    expect(body).toMatch(/Verbatim quotes required/);
+    expect(body).toMatch(/Single YAML output/);
+    expect(body).toMatch(/No git mutation/);
+    expect(body).toMatch(/Scope control/);
+  });
+
+  it("Output format documents the claims/quotes/candidate shape with a YAML example", () => {
+    const { body } = loadMarkdown(path);
+    expect(body).toMatch(/claims:/);
+    expect(body).toMatch(/quotes:/);
+    expect(body).toMatch(/candidate:/);
+    expect(body).toMatch(/proposed_slug|target/);
+    expect(body).toMatch(/new-principle/);
+    expect(body).toMatch(/extend-topic/);
+  });
+
+  it("Workflow process names the WebFetch tool for source retrieval", () => {
+    const { body } = loadMarkdown(path);
+    expect(body).toMatch(/WebFetch/);
+  });
+
+  it("has no placeholder leftovers", () => {
+    const { raw } = loadMarkdown(path);
+    expect(noPlaceholders(raw)).toEqual([]);
+  });
+});
