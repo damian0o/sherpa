@@ -2,7 +2,7 @@
 
 One command from "I read an article" to "the wiki reflects its claims as principles or topics, with citations back to a `raw/` summary." v0.2.0 ships exactly this pipeline — the first of three sub-bands that decompose v0.2 (v0.2.0 = ingest; v0.2.1 = lint + derived graph; v0.2.2 = SessionStart hook).
 
-This spec is concrete enough to plan from because it was brainstormed against four real sources the user wants to seed the `sherpa-wiki` with: Mitchell Hashimoto's "Engineer the harness" essay, an article on commit-message hygiene, an Aviator post on spec-driven verification, and a captured conversation with an ex-Dropbox engineer (the "James" sources). The dogfood gate at the bottom of this spec walks through ingesting those.
+This spec is concrete enough to plan from because it was brainstormed against five real sources the user wants to seed the `sherpa-wiki` with: Andrej Karpathy's "LLM Wiki" gist (the origin doc this whole project is built on), Mitchell Hashimoto's "Engineer the harness" essay, an article on commit-message hygiene, an Aviator post on spec-driven verification, and a captured conversation with an ex-Dropbox engineer (the "James" sources). The dogfood gate at the bottom of this spec walks through ingesting those.
 
 ## Goal
 
@@ -161,6 +161,7 @@ sources: []
 | Mid-flow failure (between writes and commit) | User deletes `raw/<slug>.md` and any partial new pages, then re-runs `/context-ingest <url>`. v0.2.0 does not roll back automatically. |
 | Author / title extraction quality | Best-effort. `author: (not detected)` and `title: (not detected)` are valid front-matter values. |
 | Analyzer returns zero claims | STOP. Treat as a failed extraction; the source did not yield wiki-worthy content under this run. |
+| Meta source (describes the wiki *method*, not a domain) | Ingest normally — no special path. Such a source (e.g. Karpathy's "LLM Wiki" origin doc, our first backbone ingest) yields principles/topics *about the method itself* (e.g. `compounding-knowledge-artifact`, `wiki-architecture`). Pleasingly recursive: the coordination wiki ends up holding the very idea that birthed it, and that ingest is itself the clearest demonstration of the pattern the source describes. The analyzer classifies its claims like any other; no handling change required. |
 
 ## Tests
 
@@ -191,7 +192,7 @@ Estimated 10–12 new vitest assertions.
 
 ## Dogfood acceptance gate
 
-Set up a real coordination-store at `damian0o/sherpa-wiki` (new GitHub repo, private to start, flip to public after acceptance). Ingest the three backbone URLs through `/context-ingest`; file James's three principles manually since the conversation is already a 3-bullet synthesis with no URL to fetch.
+Set up a real coordination-store at `damian0o/sherpa-wiki` (new GitHub repo, private to start, flip to public after acceptance). Ingest the four backbone URLs through `/context-ingest`; file James's three principles manually since the conversation is already a 3-bullet synthesis with no URL to fetch.
 
 Steps:
 
@@ -199,18 +200,19 @@ Steps:
 2. `/context-init` → empty wiki with `.gitkeep` × 4, meta-json synced.
 3. Push to `damian0o/sherpa-wiki` (private; flip to public after acceptance).
 4. Stay inside the wiki directory.
-5. `/context-ingest https://mitchellh.com/writing/my-ai-adoption-journey` → review the proposals (expect 1 new principle `engineer-the-harness`, possibly 1–2 extending topics like `agent-tooling`) → accept all → verify commit lands.
-6. `/context-ingest https://medium.com/@iambonitheuri/the-art-of-writing-meaningful-git-commit-messages-a56887a4cb49` → expect a `topics/commit-conventions.md` (status: stable) and possibly a `principles/clear-history.md` or similar.
-7. `/context-ingest https://www.aviator.co/blog/what-if-code-review-happened-before-the-code-was-written/` → expect a new principle (e.g. `spec-driven-verification`) and a topic on the two-agent workflow.
-8. Manually write the three James principles: `principles/conceptualisation-over-syntax.md`, `principles/teams-by-problem.md`, `principles/simple-systems.md`. Each has a `sources: []` array (no traceable source). Run `meta-syncer` manually after the manual writes so the meta-json reflects them.
+5. `/context-ingest https://gist.githubusercontent.com/karpathy/442a6bf555914893e9891c11519de94f/raw/ac46de1ad27f92b28ac95459c782c07f6b8c964a/llm-wiki.md` → override the derived slug to `llm-wiki` → this is the *origin doc* and is meta (about the wiki method, not the engineering domain), so expect principle candidates like `compounding-knowledge-artifact` and a `wiki-architecture` topic (raw/wiki/schema layers; ingest → query → lint), not domain claims. (Pleasingly recursive: the coordination wiki ends up holding the very idea that birthed it — this ingest is itself the clearest demonstration of the pattern the source describes.) → accept the substantive ones → verify the commit lands.
+6. `/context-ingest https://mitchellh.com/writing/my-ai-adoption-journey` → review the proposals (expect 1 new principle `engineer-the-harness`, possibly 1–2 extending topics like `agent-tooling`) → accept all → verify commit lands.
+7. `/context-ingest https://medium.com/@iambonitheuri/the-art-of-writing-meaningful-git-commit-messages-a56887a4cb49` → expect a `topics/commit-conventions.md` (status: stable) and possibly a `principles/clear-history.md` or similar.
+8. `/context-ingest https://www.aviator.co/blog/what-if-code-review-happened-before-the-code-was-written/` → expect a new principle (e.g. `spec-driven-verification`) and a topic on the two-agent workflow.
+9. Manually write the three James principles: `principles/conceptualisation-over-syntax.md`, `principles/teams-by-problem.md`, `principles/simple-systems.md`. Each has a `sources: []` array (no traceable source). Run `meta-syncer` manually after the manual writes so the meta-json reflects them.
 
 Acceptance criteria:
 
-- Three `raw/` entries exist, one per backbone URL, each with `source_url`, `fetched_on`, `ingested_on` in front-matter and at least one verbatim quote per claim.
-- At least five principles total across the wiki, including the three James principles.
+- Four `raw/` entries exist, one per backbone URL, each with `source_url`, `fetched_on`, `ingested_on` in front-matter and at least one verbatim quote per claim.
+- At least six principles total across the wiki, including the three James principles.
 - At least one topic page per ingested article (commit-conventions, agent-tooling or agent-workflow, spec-driven-verification or similar — the exact slugs are analyzer-judgment).
 - Every principle whose source came from a URL ingest has `sources:` referencing the matching `raw/` slug. The three James principles have `sources: []` and a note in the body explaining the un-traceable origin.
-- `log.md` contains three chronological `## [<date>] ingest | <slug>` entries (one per ingested URL).
+- `log.md` contains four chronological `## [<date>] ingest | <slug>` entries (one per ingested URL).
 - `.repo-context-meta.json` arrays match the on-disk content after the last ingest (and the final manual `meta-syncer` run for the James writes).
 
 After acceptance, tag `v0.2.0` from `main` on the `sherpa` repo, push the tag, and create a GitHub Release using the tag annotation.

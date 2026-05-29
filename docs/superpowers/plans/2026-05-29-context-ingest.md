@@ -599,11 +599,11 @@ Expected: four commits, one per Task 1–4:
 
 ---
 
-## Task 5: Manual dogfood — stand up `sherpa-wiki` + ingest 3 backbone URLs + file James manually
+## Task 5: Manual dogfood — stand up `sherpa-wiki` + ingest 4 backbone URLs + file James manually
 
 **Files:** none modified — user-driven scenario.
 
-This task is the v0.2.0 acceptance gate per the spec. It exercises the full `/context-ingest` path against three real backbone sources and produces the living seed content for sherpa's own development wiki.
+This task is the v0.2.0 acceptance gate per the spec. It exercises the full `/context-ingest` path against four real backbone sources and produces the living seed content for sherpa's own development wiki.
 
 - [ ] **Step 1: Reinstall the plugin to pick up v0.2.0**
 
@@ -641,7 +641,22 @@ gh repo create sherpa-wiki --private --source=. --remote=origin --push
 
 (The active gh CLI account for this project is `damian0o`; SSH-protocol pushes should work cleanly. If push fails with `Repository not found`, switch the remote to HTTPS with `git remote set-url origin https://github.com/damian0o/sherpa-wiki.git` and retry. The rationale lives in the project's auto-memory: a damianhico account also exists in the same gh keyring, and the SSH key resolves to damian0o, which is why mixing the active account causes push failures.)
 
-- [ ] **Step 4: Ingest backbone URL #1 — Mitchell Hashimoto's "Engineer the harness"**
+- [ ] **Step 4: Ingest backbone URL #1 — Karpathy's "LLM Wiki" (the origin doc)**
+
+Still inside `~/playground/sherpa-wiki/`, in Claude Code:
+
+```
+/context-ingest https://gist.githubusercontent.com/karpathy/442a6bf555914893e9891c11519de94f/raw/ac46de1ad27f92b28ac95459c782c07f6b8c964a/llm-wiki.md
+```
+
+This is the foundational source — the idea file the whole project is built on (byte-for-byte identical to the repo's untracked `TODO.md`). Expected behavior:
+- Slug derives to `llm-wiki-md` or similar from the raw URL; override to `llm-wiki`.
+- `article-analyzer` fetches the gist (plain markdown — WebFetch handles it cleanly) and returns several claims.
+- This source is **meta**: it describes the wiki *method* (raw/wiki/schema layers; ingest → query → lint), not the engineering domain. Expect principle candidates like `compounding-knowledge-artifact` and a topic like `wiki-architecture` — not domain claims.
+- This is pleasingly **recursive**: the coordination wiki ends up holding the very idea that birthed it, so this ingest is itself the clearest demonstration of the pattern the source describes.
+- Accept the substantive ones, verify the meta-syncer confirmation line, and verify the commit lands.
+
+- [ ] **Step 5: Ingest backbone URL #2 — Mitchell Hashimoto's "Engineer the harness"**
 
 Still inside `~/playground/sherpa-wiki/`, in Claude Code:
 
@@ -657,7 +672,7 @@ Expected behavior:
 - Verify the meta-syncer confirmation line appears.
 - Verify the commit lands: `git log --oneline` should show one new commit `Ingest <slug>: <N> claims`.
 
-- [ ] **Step 5: Ingest backbone URL #2 — Commit messages**
+- [ ] **Step 6: Ingest backbone URL #3 — Commit messages**
 
 ```
 /context-ingest https://medium.com/@iambonitheuri/the-art-of-writing-meaningful-git-commit-messages-a56887a4cb49
@@ -665,7 +680,7 @@ Expected behavior:
 
 Expected: a `topics/commit-conventions.md` (status: stable) candidate; possibly extensions or a `topics/commit-hygiene.md`. Accept the substantive ones.
 
-- [ ] **Step 6: Ingest backbone URL #3 — Aviator spec-driven verification**
+- [ ] **Step 7: Ingest backbone URL #4 — Aviator spec-driven verification**
 
 ```
 /context-ingest https://www.aviator.co/blog/what-if-code-review-happened-before-the-code-was-written/
@@ -673,7 +688,7 @@ Expected: a `topics/commit-conventions.md` (status: stable) candidate; possibly 
 
 Expected: a `principles/spec-driven-verification.md` candidate (or similarly named) plus a `topics/agent-workflow.md` candidate covering the two-agent (impl + verify) pattern. Accept and verify the commit.
 
-- [ ] **Step 7: File the 3 James principles manually**
+- [ ] **Step 8: File the 3 James principles manually**
 
 These have no URL to fetch. Create them by hand under `~/playground/sherpa-wiki/principles/`:
 
@@ -746,7 +761,7 @@ This does not mean refusing all complexity. It means complexity must be justifie
 Captured 2026-05-29 from a conversation with James (ex-Dropbox). No URL.
 ```
 
-- [ ] **Step 8: Manually sync meta-json after the James writes**
+- [ ] **Step 9: Manually sync meta-json after the James writes**
 
 The James principles bypassed `/context-ingest`, so `.repo-context-meta.json` doesn't yet reflect them. In the same Claude Code session, dispatch `meta-syncer` manually:
 
@@ -763,7 +778,7 @@ cd ~/playground/sherpa-wiki
 git add . && git commit -m "Add 3 James principles + sync meta"
 ```
 
-- [ ] **Step 9: Verify the acceptance criteria**
+- [ ] **Step 10: Verify the acceptance criteria**
 
 From `~/playground/sherpa-wiki/`:
 
@@ -778,14 +793,14 @@ echo "=== checking each ingest principle has a sources: array ===" && \
 ```
 
 Acceptance criteria from the spec:
-- Three `raw/` entries, one per backbone URL, each with verbatim quotes in front-matter and body.
-- At least five principles total (3 James + at least 2 from ingest).
-- At least one topic page per ingested article (so ≥3 topic pages from ingest, plus any extensions).
+- Four `raw/` entries, one per backbone URL, each with verbatim quotes in front-matter and body.
+- At least six principles total (3 James + at least 3 from ingest).
+- At least one topic page per ingested article (so ≥4 topic pages from ingest, plus any extensions).
 - Every principle whose source was a URL ingest has `sources:` pointing at the matching raw slug. James principles have `sources: []`.
-- `log.md` has 3 ingest entries plus the `init` entry, chronologically.
+- `log.md` has 4 ingest entries plus the `init` entry, chronologically.
 - `.repo-context-meta.json` arrays match on-disk content (run `meta-syncer` once more if the counts look off).
 
-- [ ] **Step 10: Push the wiki**
+- [ ] **Step 11: Push the wiki**
 
 ```bash
 cd ~/playground/sherpa-wiki
@@ -794,7 +809,7 @@ git push origin main
 
 Verify on GitHub: `gh repo view damian0o/sherpa-wiki --web` (opens in browser).
 
-- [ ] **Step 11: Record outcome in memory**
+- [ ] **Step 12: Record outcome in memory**
 
 Update `~/.claude/projects/-Users-damianospara-playground-sherpa/memory/reference_seed_sources.md` to note: "Ingested on 2026-05-29 into `damian0o/sherpa-wiki`." Or append a new project memory describing what landed and where.
 
