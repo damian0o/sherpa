@@ -11,14 +11,14 @@ This repo is the marketplace. The `repo-context` plugin's full design lives in [
 ## Install
 
 ```bash
-/plugin marketplace add <this-repo-url>
+/plugin marketplace add damian0o/sherpa
 /plugin install repo-context@sherpa
 ```
 
-For local development:
+For local development (working from a clone):
 
 ```bash
-/plugin marketplace add /path/to/this/repo
+/plugin marketplace add /path/to/your/sherpa/clone
 /plugin install repo-context@sherpa
 ```
 
@@ -59,8 +59,8 @@ Run this sequence end-to-end to validate the install / scaffold / connect / onbo
 ### Steps
 
 ```bash
-# 1. Install the plugin from this local marketplace.
-/plugin marketplace add /path/to/llm-wiki-impl
+# 1. Install the plugin from the marketplace (use the GitHub form, or a local clone path).
+/plugin marketplace add damian0o/sherpa
 /plugin install repo-context@sherpa
 
 # 2. Create an empty directory for the wiki and scaffold it.
