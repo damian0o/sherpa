@@ -1,8 +1,8 @@
-# repo-context
+# sherpa
 
-A Claude Code plugin that maintains a shared coordination wiki across multiple satellite repositories (frontend, backend, infra, etc.) connected via git submodule.
+A Claude Code marketplace for coordination and shared-understanding plugins. Its first plugin is **`repo-context`** — a shared coordination wiki maintained by Claude Code agents, usable in a single repository or shared across multiple satellite repositories (frontend, backend, infra, etc.) via git submodule.
 
-This repo is a single-plugin Claude Code marketplace. The plugin's full design lives in [`docs/superpowers/specs/2026-05-27-repo-context-plugin-design.md`](docs/superpowers/specs/2026-05-27-repo-context-plugin-design.md).
+This repo is the marketplace. The `repo-context` plugin's full design lives in [`docs/superpowers/specs/2026-05-27-repo-context-plugin-design.md`](docs/superpowers/specs/2026-05-27-repo-context-plugin-design.md).
 
 ## Status
 
@@ -12,14 +12,14 @@ This repo is a single-plugin Claude Code marketplace. The plugin's full design l
 
 ```bash
 /plugin marketplace add <this-repo-url>
-/plugin install repo-context@repo-context-marketplace
+/plugin install repo-context@sherpa
 ```
 
 For local development:
 
 ```bash
 /plugin marketplace add /path/to/this/repo
-/plugin install repo-context@repo-context-marketplace
+/plugin install repo-context@sherpa
 ```
 
 ## Quick start
@@ -61,7 +61,7 @@ Run this sequence end-to-end to validate the install / scaffold / connect / onbo
 ```bash
 # 1. Install the plugin from this local marketplace.
 /plugin marketplace add /path/to/llm-wiki-impl
-/plugin install repo-context@repo-context-marketplace
+/plugin install repo-context@sherpa
 
 # 2. Create an empty directory for the wiki and scaffold it.
 mkdir ~/playground/example-context-store && cd ~/playground/example-context-store

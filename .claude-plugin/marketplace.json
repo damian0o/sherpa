@@ -1,7 +1,7 @@
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
-  "name": "repo-context-marketplace",
-  "description": "Cross-repo coordination wiki for Claude Code agents",
+  "name": "sherpa",
+  "description": "Claude Code marketplace for coordination & shared-understanding plugins; first plugin is repo-context (cross-repo coordination wiki)",
   "owner": {
     "name": "Damian Ospara"
   },

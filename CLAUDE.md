@@ -1,6 +1,6 @@
-# CLAUDE.md — repo-context contributor guide
+# CLAUDE.md — sherpa contributor guide
 
-You are working in the `repo-context` plugin source repository. This is a Claude Code marketplace whose first plugin is `repo-context` — a shared coordination wiki across multiple satellite repos. The full design is in [`docs/superpowers/specs/2026-05-27-repo-context-plugin-design.md`](docs/superpowers/specs/2026-05-27-repo-context-plugin-design.md).
+You are working in the `sherpa` marketplace source repository — a Claude Code marketplace for coordination and shared-understanding plugins. Its first plugin is `repo-context`, a shared coordination wiki for one or many repos. The full plugin design is in [`docs/superpowers/specs/2026-05-27-repo-context-plugin-design.md`](docs/superpowers/specs/2026-05-27-repo-context-plugin-design.md).
 
 ## Philosophy
 

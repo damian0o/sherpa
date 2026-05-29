@@ -1,7 +1,7 @@
 {
-  "name": "repo-context-marketplace",
+  "name": "sherpa",
   "version": "0.1.0",
-  "description": "Claude Code marketplace hosting the repo-context plugin",
+  "description": "Sherpa — Claude Code marketplace hosting the repo-context plugin (coordination & shared-understanding for one or many repos)",
   "private": true,
   "type": "module",
   "scripts": {
