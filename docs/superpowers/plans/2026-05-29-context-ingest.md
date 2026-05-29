@@ -649,7 +649,7 @@ Still inside `~/playground/sherpa-wiki/`, in Claude Code:
 /context-ingest https://gist.githubusercontent.com/karpathy/442a6bf555914893e9891c11519de94f/raw/ac46de1ad27f92b28ac95459c782c07f6b8c964a/llm-wiki.md
 ```
 
-This is the foundational source — the idea file the whole project is built on (byte-for-byte identical to the repo's untracked `TODO.md`). Expected behavior:
+This is the foundational source — the idea file the whole project is built on (byte-for-byte identical to the repo's `docs/llm-wiki-idea.md`, Karpathy's origin doc). Expected behavior:
 - Slug derives to `llm-wiki-md` or similar from the raw URL; override to `llm-wiki`.
 - `article-analyzer` fetches the gist (plain markdown — WebFetch handles it cleanly) and returns several claims.
 - This source is **meta**: it describes the wiki *method* (raw/wiki/schema layers; ingest → query → lint), not the engineering domain. Expect principle candidates like `compounding-knowledge-artifact` and a topic like `wiki-architecture` — not domain claims.
@@ -827,7 +827,7 @@ git status
 npm test 2>&1 | tail -5
 ```
 
-Expected: `nothing to commit, working tree clean` (untracked `TODO.md` is OK), 120 tests pass.
+Expected: `nothing to commit, working tree clean`, 120 tests pass.
 
 - [ ] **Step 2: Tag v0.2.0**
 
