@@ -2,6 +2,7 @@
 updated: {{date}}
 status: active
 repos: []
+sources: []
 ---
 # {{title}}
 

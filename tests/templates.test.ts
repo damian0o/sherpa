@@ -78,6 +78,11 @@ describe("templates/topic.md", () => {
     const { frontMatter } = loadMarkdown(path);
     expect(Array.isArray(frontMatter.repos)).toBe(true);
   });
+  it("has a sources: field that parses as an array", () => {
+    const { frontMatter } = loadMarkdown(path);
+    expect(frontMatter).toHaveProperty("sources");
+    expect(Array.isArray(frontMatter.sources)).toBe(true);
+  });
   it("has the {{title}} substitution marker on the H1", () => {
     const { raw } = loadMarkdown(path);
     expect(raw).toMatch(/^# \{\{title\}\}/m);
@@ -152,5 +157,32 @@ describe("templates/satellite-CLAUDE.md", () => {
     const { raw } = loadMarkdown(path);
     expect(raw).toMatch(/<!-- BEGIN repo-context -->/);
     expect(raw).toMatch(/<!-- END repo-context -->/);
+  });
+});
+
+describe("templates/raw.md", () => {
+  const path = resolve(templatesDir, "raw.md");
+  it("exists", () => expect(existsSync(path)).toBe(true));
+  it("has YAML front-matter with required fields", () => {
+    const { frontMatter } = loadMarkdown(path);
+    for (const field of ["source_url", "fetched_on", "ingested_on", "title"]) {
+      expect(frontMatter).toHaveProperty(field);
+    }
+  });
+  it("has the {{title}} substitution marker on the H1", () => {
+    const { raw } = loadMarkdown(path);
+    expect(raw).toMatch(/^# \{\{title\}\}/m);
+  });
+  it("has Summary and Claims sections", () => {
+    const { body } = loadMarkdown(path);
+    expect(hasSections(body, ["Summary", "Claims"])).toEqual([]);
+  });
+  it("references the source_url field in the body for traceability", () => {
+    const { raw } = loadMarkdown(path);
+    expect(raw).toMatch(/\{\{source_url\}\}/);
+  });
+  it("has no banned placeholder strings", () => {
+    const { raw } = loadMarkdown(path);
+    expect(noPlaceholders(raw)).toEqual([]);
   });
 });
