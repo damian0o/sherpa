@@ -6,13 +6,42 @@ The marketplace version and the plugin version are kept in lockstep until the ma
 
 ## [Unreleased]
 
-### Planned (v0.2.0)
+### Planned (v0.2.1)
 
-- `/context-ingest` command — pull external sources (articles, conversations) into `raw/` and propose topic / decision / principle pages from them.
 - `/context-lint` skill — health checks across the wiki: orphan pages, stale topics, contradictions, decisions whose referenced topic no longer reflects them.
-- `article-analyzer`, `lint-reporter`, `graph-reviewer` sub-agents.
-- SessionStart hook — passive reminder that a wiki submodule exists in the satellite.
+- `lint-reporter`, `graph-reviewer` sub-agents.
 - Derived graph in `.repo-context-meta.json` — cross-references, orphan detection, status filtering. (v0.1's meta-syncer only writes minimal `{slug, path}` arrays.)
+- Lint carve-out (or a `human-captured` marker) for principles that legitimately have no source URL, so they aren't flagged as unverifiable.
+
+### Planned (v0.2.2)
+
+- SessionStart hook — passive reminder that a wiki submodule exists in the satellite.
+
+## [0.2.0] — 2026-05-30
+
+`/context-ingest`: turn a web source into wiki pages in one command.
+
+### Added — plugin `repo-context`
+
+- **Command**
+  - `/context-ingest <url>` — fetch a web source, extract verbatim-quoted claims via `article-analyzer`, present principle/topic page proposals (new pages or extensions of existing ones), write the accepted pages with citations back to a `raw/<slug>.md` evidence summary, update `index.md` and `log.md`, sync `.repo-context-meta.json` via `meta-syncer`, and commit inside the wiki repo (never pushes). Refuses to re-ingest a URL whose `raw/<slug>.md` already exists. Slug derivation strips a recognized trailing document extension (`.md`, `.html`, …); WebFetch cross-host redirects are followed once.
+- **Sub-agent**
+  - `article-analyzer` — read-only on the source. Fetches via WebFetch and returns a single YAML document: a source-level summary plus claims, each carrying verbatim quotes and a candidate destination (`new-`/`extend-` principle or topic). Proposes no decisions and extracts no entities (scope control); writes nothing to disk.
+- **Templates**
+  - `raw.md` — new ingest-summary template: front-matter `source_url` / `fetched_on` / `ingested_on` / `title` / `author`; `Summary` and `Claims` sections.
+  - `topic.md` — gains a `sources:` front-matter array (mirrors the field already on `principles/`).
+
+### Tests
+
+- 120 vitest assertions (was 97): +7 templates, +7 `article-analyzer`, +9 `/context-ingest`.
+
+### Upgrade
+
+- `/plugin marketplace update sherpa` → `/plugin install repo-context@sherpa` → `/reload-plugins`. `/context-ingest` then appears in `/help`.
+
+### Dogfood
+
+- Seeded `damian0o/sherpa-wiki` (private) with five backbone sources: Karpathy's "LLM Wiki" origin doc, Mitchell Hashimoto's "engineer the harness" essay, a guide to meaningful git commit messages, Aviator's spec-driven verification post, and James Cowling's ex-Dropbox takeaways — producing 5 `raw/` evidence pages, 7 principles, and 4 topics.
 
 ## [0.1.0] — 2026-05-29
 
@@ -68,5 +97,6 @@ When the slug comes from step 2 or 3, `repo-scanner` emits `derived_from: <sourc
 - Satellite-to-wiki submodules over `file://` URLs require `git -c protocol.file.allow=always`; real `https://` / `git@` remotes work without it. Considered a setup artifact, not a plugin bug.
 - No `packages/dashboard/` yet — that's v1.0.
 
-[Unreleased]: https://github.com/damian0o/sherpa/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/damian0o/sherpa/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/damian0o/sherpa/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/damian0o/sherpa/releases/tag/v0.1.0
