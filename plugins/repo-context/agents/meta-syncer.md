@@ -58,7 +58,7 @@ Each array's entries are sorted by `slug`, ascending. Empty arrays are represent
 2. For each of `topics/`, `decisions/`, `principles/` (in that order), list direct child entries at depth 1 only:
    - Use the Bash tool: `ls -1 <wiki-root>/<dir>/`.
    - Filter to entries matching `*.md`. Exclude `.gitkeep`, dot-files, and anything that is not a regular file (no descent into subdirectories — depth 1 only).
-3. `raw/` is intentionally skipped. It holds evidence/source ingests, not catalogue material; `index.md` does not track `raw/` either.
+3. `raw/` is intentionally skipped — it holds evidence/source ingests, not catalogue material, so it never appears in this marker file's arrays. (`raw/` pages are still listed in `index.md` under Sources; this agent does not touch `index.md`.)
 4. For each remaining `.md` filename, derive `slug` as the filename minus the trailing `.md`. Derive `path` as `<dir>/<filename>` with forward slashes.
 5. Sort each array by `slug`, ascending. Empty arrays stay `[]`.
 6. Compose the JSON document with `kind: "repo-context-store"`, `schema_version: 1`, the three arrays, and `updated:` set to today's ISO date (YYYY-MM-DD). Use the Bash tool to obtain the date: `date +%F`.
