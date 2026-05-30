@@ -101,3 +101,59 @@ describe("commands/context-connect.md", () => {
     expect(noPlaceholders(raw)).toEqual([]);
   });
 });
+
+describe("commands/context-ingest.md", () => {
+  const path = resolve(commandsDir, "context-ingest.md");
+
+  it("exists", () => {
+    expect(existsSync(path)).toBe(true);
+  });
+
+  it("front-matter has name, description, and argument-hint", () => {
+    const { frontMatter } = loadMarkdown(path);
+    expect(frontMatter.name).toBe("context-ingest");
+    expect(typeof frontMatter.description).toBe("string");
+    expect((frontMatter.description as string).length).toBeGreaterThan(20);
+    expect(frontMatter).toHaveProperty("argument-hint");
+  });
+
+  it("body has Preconditions, Steps, and Idempotency sections", () => {
+    const { body } = loadMarkdown(path);
+    expect(hasSections(body, ["Preconditions", "Steps", "Idempotency"])).toEqual([]);
+  });
+
+  it("body documents slug derivation from the URL", () => {
+    const { body } = loadMarkdown(path);
+    expect(body).toMatch(/slug/i);
+    expect(body).toMatch(/last.*path|path.*component|URL/i);
+  });
+
+  it("body dispatches the article-analyzer sub-agent", () => {
+    const { body } = loadMarkdown(path);
+    expect(body).toMatch(/article-analyzer/);
+    expect(body).toMatch(/subagent_type/);
+  });
+
+  it("body invokes meta-syncer and verifies the confirmation line", () => {
+    const { body } = loadMarkdown(path);
+    expect(body).toMatch(/meta-syncer/);
+    expect(body).toMatch(/meta-syncer: synced/);
+  });
+
+  it("body specifies refusal when raw/<slug>.md already exists", () => {
+    const { body } = loadMarkdown(path);
+    expect(body).toMatch(/raw\/.*\.md.*exists|exists.*raw\//i);
+    expect(body).toMatch(/refuse|stop|abort/i);
+  });
+
+  it("body writes a log entry with the ingest kind", () => {
+    const { body } = loadMarkdown(path);
+    expect(body).toMatch(/log\.md/);
+    expect(body).toMatch(/ingest \|/);
+  });
+
+  it("has no placeholder leftovers", () => {
+    const { raw } = loadMarkdown(path);
+    expect(noPlaceholders(raw)).toEqual([]);
+  });
+});
